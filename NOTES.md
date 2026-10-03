@@ -133,6 +133,31 @@ nedostupnost celé služby, místo abych si ověřil konvenci pojmenování.
 Doměřeno HEAD dotazem na všech **111 obcí** okresu Jičín, soubor `20260930_OB_<kod>_UKSH.xml.zip`:
 **111 dostupných, 0 nedostupných.** Aktuální VFR strojově dostupné je a bylo 3 dny staré.
 
+## Odkaz na detail parcely v ČÚZK
+
+V detailu parcely chci odkaz na oficiální zdroj. Zkoušel jsem dvě možnosti.
+
+**Nahlížení do KN nepoužívám.** `nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=<id>`
+vrátil při prvním pokusu HTTP 200 a 16 301 B, při druhém HTTP 302 na stránku ochrany provozu.
+Deep link tedy potřebuje session a není stabilní.
+
+**Použiju VDP:** `https://vdp.cuzk.gov.cz/vdp/ruian/parcely/<ID_2>`. Ověřeno na čtyřech
+identifikátorech, opakovaně, běžným GETem bez cookies:
+
+| ID_2 | HTTP | velikost | na stránce |
+|---|---|---|---|
+| 1678189604 | 200 | 23 966 B | `st. 1/1`, `Bašnice`, `2494` |
+| 2789935604 | 200 | 23 737 B | `410/3`, `Údrnice` |
+| 42104377010 | 200 | 23 951 B | — |
+
+Odpovědi se liší velikostí podle parcely, titulek je „Parcela - detail“ a obsah souhlasí
+s tím, co mám v databázi. Žádné přesměrování. Funguje i na doméně `vdp.cuzk.cz`.
+Stránka navíc sama uvádí „Platnost dat ISÚI k: 03.10.2026 14:00“, takže ukazuje živý RÚIAN,
+ne můj snapshot. To je pro odkaz z detailu to, co chci.
+
+Potvrzuje to i volbu klíče: `ID_2` ze shapefilu je RÚIAN identifikátor parcely, protože se
+s ním VDP dotáhne přímo na správnou parcelu.
+
 ## Nástroje a prostředí (ověřeno)
 
 - Docker 28.5.1, Docker Compose v2.40.0-desktop.1, server linux/x86_64 (WSL2)
@@ -349,6 +374,3 @@ KÚ Jičín má 12 288 parcel, což přesně odpovídá samostatnému měření 
 - `COPY` umí `ENCODING 'WIN1250'`, takže CSV od ČÚZK jde načíst bez převodu přes `iconv`.
 - Seznam 240 KÚ není v repozitáři vypsaný ručně. Dopočítá se v SQL z číselníků RÚIAN podle
   kódu okresu, takže import jde přesměrovat na jiný okres změnou jedné proměnné.
-- Odkaz na Nahlížení do KN se zatím nepovedlo ověřit jako stabilní. `ZobrazObjekt.aspx?typ=
-  parcela&id=<id>` vrátil jednou HTTP 200, při druhém pokusu HTTP 302 na ochrannou stránku,
-  takže deep link nejspíš potřebuje session. Do UI ho nedám, dokud ho neověřím.

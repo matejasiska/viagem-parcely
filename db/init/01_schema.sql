@@ -33,3 +33,13 @@ CREATE TABLE parcela (
 CREATE INDEX parcela_geom_idx ON parcela USING gist (geom);
 CREATE INDEX parcela_ku_idx ON parcela (katastralni_uzemi_kod);
 CREATE INDEX katastralni_uzemi_geom_idx ON katastralni_uzemi USING gist (geom);
+
+-- Jeden řádek na import. Drží verzi vstupních dat (nejnovější Last-Modified stažených
+-- souborů ČÚZK), ať je v aplikaci vidět, k jakému stavu katastru data patří.
+CREATE TABLE datova_sada (
+    zdroj        text NOT NULL,
+    datum_dat    date NOT NULL,
+    importovano  timestamptz NOT NULL DEFAULT now(),
+    pocet_ku     integer NOT NULL,
+    pocet_parcel integer NOT NULL
+);
