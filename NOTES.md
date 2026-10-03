@@ -194,24 +194,86 @@ propady velké a soustředěné do jedné části okresu (Zliv u Libáně 53 %, 
 Křešice u Psinic 67 %, Nadslav 70 %, Libáň 72 %, Bašnice 78 %) — to je podpis komplexních
 pozemkových úprav, které parcely scelují.
 
-Ověřil jsem to geometricky, ne odhadem: parcely musí katastrální území vyplnit beze zbytku.
-Součet atributových výměr proti ploše polygonu KÚ (obojí přepočteno do S-JTSK):
+Ověřil jsem to geometricky. První pokus byl ale slabý: porovnával jsem součet **atributových
+výměr** s plochou polygonu KÚ. Polygony parcel v tom nebyly vůbec, takže to nemohlo doložit
+ani správnost transformace geometrie, ani že atributy patří ke správnému polygonu. Doměřeno:
 
-| KÚ | parcel | výměra z atributů | plocha KÚ | pokrytí |
+### Součet ploch polygonů parcel proti ploše KÚ
+
+Obojí přepočteno do S-JTSK (EPSG:5514), kde je plocha v metrech, ne zkreslená Web Mercatorem:
+
+| KÚ | parcel | součet polygonů parcel | plocha polygonu KÚ | pokrytí |
 |---|---|---|---|---|
-| Zliv u Libáně | 491 | 387,2 ha | 387,2 ha | 100,0 % |
-| Psinice | 854 | 547,9 ha | 547,9 ha | 100,0 % |
-| Křešice u Psinic | 558 | 348,8 ha | 348,8 ha | 100,0 % |
-| Libáň | 2 819 | 683,3 ha | 683,3 ha | 100,0 % |
-| Bašnice | 1 465 | 612,7 ha | 612,6 ha | 100,0 % |
-| Jičín | 12 288 | 1 208,2 ha | 1 208,2 ha | 100,0 % |
-| Nová Paka | 8 231 | 718,9 ha | 718,9 ha | 100,0 % |
-| Hořice v Podkrkonoší | 8 363 | 843,4 ha | 843,4 ha | 100,0 % |
+| Zliv u Libáně | 491 | 387,23 ha | 387,23 ha | 100,000 % |
+| Psinice | 854 | 547,93 ha | 547,93 ha | 100,000 % |
+| Křešice u Psinic | 558 | 348,83 ha | 348,83 ha | 100,000 % |
+| Nadslav | 692 | 580,26 ha | 580,26 ha | 100,000 % |
+| Libáň | 2 819 | 683,25 ha | 683,25 ha | 100,000 % |
+| Hřmenín | 653 | 360,83 ha | 360,83 ha | 100,000 % |
+| Bašnice | 1 465 | 612,56 ha | 612,56 ha | 100,000 % |
+| Jičín | 12 288 | 1 208,21 ha | 1 208,21 ha | 100,000 % |
+| Nová Paka | 8 231 | 718,88 ha | 718,88 ha | 100,000 % |
+| Hořice v Podkrkonoší | 8 363 | 843,42 ha | 843,42 ha | 100,000 % |
 
-Pokrytí 100 % i u KÚ s největším propadem počtu znamená, že nechybí data — parcel je skutečně
-méně, protože jsou větší. Vedlejší zisk: shoda atributové výměry s plochou polygonu na 0,1 %
-je nezávislé potvrzení, že transformace S-JTSK → Web Mercator při importu je v pořádku
-a že atributy patří ke správné geometrii.
+Parcely tedy katastrální území vyplní beze zbytku a bez přesahů. Pokrytí 100,000 % i u KÚ
+s největším propadem počtu (Zliv u Libáně má 53 % parcel roku 2025) znamená, že data nechybí —
+parcel je méně, protože jsou větší.
+
+### Plocha polygonu proti zapsané výměře, po parcelách
+
+Relativní odchylka `|ST_Area(ST_Transform(geom, 5514)) − vymera| / vymera` na všech 272 111
+parcelách (žádná nemá výměru NULL ani 0):
+
+| Metrika | Relativně | Absolutně |
+|---|---|---|
+| medián | 0,323 % | 0,46 m² |
+| 95. percentil | 9,771 % | 77,39 m² |
+| 99. percentil | 26,737 % | 171,12 m² |
+| maximum | 1 988 % | 2 283,8 m² |
+| parcel s odchylkou > 5 % | 29 738 (10,9 %) | |
+
+Odchylka silně závisí na velikosti parcely:
+
+| Výměra | parcel | medián | 95. percentil | nad 5 % |
+|---|---|---|---|---|
+| pod 10 m² | 5 011 | 5,629 % | 51,96 % | 2 757 |
+| 10–100 m² | 45 459 | 0,908 % | 21,78 % | 7 192 |
+| 100–1 000 m² | 116 666 | 0,210 % | 10,94 % | 17 834 |
+| 0,1–1 ha | 86 479 | 0,148 % | 3,82 % | 1 955 |
+| nad 1 ha | 18 496 | 0,005 % | 1,33 % | 0 |
+
+Nejhorší případy jsou bez výjimky drobné zbytkové parcely, kde několik m² dělá stovky procent:
+
+| id | parcela | KÚ | výměra | plocha polygonu | odchylka |
+|---|---|---|---|---|---|
+| 2789935604 | 410/3 | Údrnice | 1 m² | 20,9 m² | 1 988 % |
+| 42104377010 | 376/9 | Horní Javoří | 3 m² | 30,6 m² | 920 % |
+| 1917891604 | 422/9 | Úlibice | 2 m² | 17,1 m² | 756 % |
+
+Zapsaná výměra je právní údaj z původního měření, ne plocha dopočítaná z mapy. U území
+digitalizovaných z analogové mapy (KMD, kterých je v okrese většina) se obojí legitimně
+rozchází a výměra je navíc zaokrouhlená na celé m². Původní tvrzení „shoda na 0,1 %“ tedy
+po parcelách **neplatí** — platí jen v součtu, kde se odchylky opačných znamének vyruší.
+
+### Patří atributy ke správnému polygonu
+
+Odchylky výměr tohle nedokazují, mají vlastní vysvětlení výše. Rozhodující test je definiční
+bod: v `PARCELY_KN_DEF` má každá parcela bod, který musí ležet uvnitř svého polygonu.
+Napároval jsem ho nezávisle na `(katuze_kod, číslo parcely)`, tedy jiným klíčem, než jakým
+běží import (`katuze_kod, ID`). KÚ Jičín:
+
+| Kontrola | Výsledek |
+|---|---|
+| definičních bodů | 12 288 |
+| bod leží ve svém polygonu | 12 288 |
+| bod mimo polygon | 0 |
+| nenapárovaných | 0 |
+| jiné číslo parcely než v atributech | 0 |
+| jiná výměra než v atributech | 0 |
+
+Párování atributů na geometrii je správné. Nepřímo to podporuje i to, že u 18 496 parcel
+nad 1 ha je medián odchylky 0,005 % a ani jedna nepřekročí 5 %: při chybném joinu by se
+rozcházely i velké parcely, kde zaokrouhlení nehraje roli.
 
 KÚ Jičín má 12 288 parcel, což přesně odpovídá samostatnému měření shapefilu před importem.
 
