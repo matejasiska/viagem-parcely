@@ -12,6 +12,12 @@ PG="PG:host=$PGHOST dbname=$PGDATABASE user=$PGUSER password=$PGPASSWORD"
 
 q() { psql -qtAX -v ON_ERROR_STOP=1 "$@"; }
 
+# ogr2ogr neumí -select společně s -append, proto se sloupce vybírají přes -sql.
+nahraj() {
+    src="$1"; tabulka="$2"; dotaz="$3"; shift 3
+    ogr2ogr -f PostgreSQL "$PG" "$src" -nln "$tabulka" -append --config PG_USE_COPY YES -sql "$dotaz" "$@"
+}
+
 naimportovano=$(q -c "SELECT count(*) FROM parcela" 2>/dev/null || echo 0)
 if [ "$naimportovano" -gt 0 ]; then
     echo "V databázi už je $naimportovano parcel, import přeskočen."
@@ -35,6 +41,10 @@ psql -q -v ON_ERROR_STOP=1 -v okres="$OKRES" -f "$SQL/01_ciselniky.sql"
 psql -q -v ON_ERROR_STOP=1 -f "$SQL/02_staging.sql"
 
 kody=$(q -c "SELECT kod FROM ku_okresu ORDER BY kod")
+if [ -z "$kody" ]; then
+    echo "Pro okres $OKRES nevyšlo z číselníků žádné katastrální území." >&2
+    exit 1
+fi
 pocet_ku=$(echo "$kody" | grep -c .)
 echo "Okres $OKRES: $pocet_ku katastrálních území"
 
@@ -64,20 +74,17 @@ for kod in $kody; do
     rm -rf "$dir"
     unzip -oq "$zip" -d "$WORK/ku"
 
-    ogr2ogr -f PostgreSQL "$PG" "$dir/PARCELY_KN_P.shp" \
-        -nln stg_parcela_geom -append -nlt PROMOTE_TO_MULTI \
-        -t_srs EPSG:3857 -select ID,ID_2,KATUZE_KOD \
-        --config PG_USE_COPY YES
+    nahraj "$dir/PARCELY_KN_P.shp" stg_parcela_geom \
+        "SELECT ID, ID_2, KATUZE_KOD FROM PARCELY_KN_P" \
+        -nlt PROMOTE_TO_MULTI -t_srs EPSG:3857
 
-    ogr2ogr -f PostgreSQL "$PG" "$dir/PARCELY_KN_DEF.shp" \
-        -nln stg_parcela_atr -append -nlt NONE \
-        -select ID,KATUZE_KOD,TEXT_KM,PAR_VYMERA,DRUPOZ_KOD,ZPVYPA_KOD \
-        --config PG_USE_COPY YES
+    nahraj "$dir/PARCELY_KN_DEF.shp" stg_parcela_atr \
+        "SELECT ID, KATUZE_KOD, TEXT_KM, PAR_VYMERA, DRUPOZ_KOD, ZPVYPA_KOD FROM PARCELY_KN_DEF" \
+        -nlt NONE
 
-    ogr2ogr -f PostgreSQL "$PG" "$dir/KATASTRALNI_UZEMI_P.shp" \
-        -nln stg_ku_geom -append -nlt PROMOTE_TO_MULTI \
-        -t_srs EPSG:3857 -select KATUZE_KOD \
-        --config PG_USE_COPY YES
+    nahraj "$dir/KATASTRALNI_UZEMI_P.shp" stg_ku_geom \
+        "SELECT KATUZE_KOD FROM KATASTRALNI_UZEMI_P" \
+        -nlt PROMOTE_TO_MULTI -t_srs EPSG:3857
 
     rm -rf "$dir"
     echo "  [$i/$pocet_ku] $kod"

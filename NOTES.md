@@ -138,3 +138,93 @@ Z `https://services.cuzk.gov.cz/sestavy/cis/`:
 - `CS_DRUH_CISLOVANI_PARCEL` — 1 stavební, 2 pozemková
 
 Druh pozemku 13 má `STAVEBNI_PARCELA = a`; odtud pochází prefix `st.` v `TEXT_KM`.
+
+## Rozhodnutí: zdroj dat je SHP po KÚ
+
+Vybral jsem **A) SHP katastrální mapy po katastrálních územích**.
+
+Důvody, v pořadí důležitosti:
+
+1. **Aktuálnost.** SHP se generuje týdně a má stabilní predikovatelnou URL. VFR se přes
+   predikovatelnou adresu dá stáhnout jen 2 měsíce staré (archiv končí u `202607`), aktuální
+   soubory jdou přes aplikaci VDP, což není strojový endpoint. Pro reprodukovatelný
+   `docker compose up` je stabilní adresa důležitější než bohatší atributy.
+2. **Objem a rychlost importu.** SHP je nativní driver GDAL. VFR by znamenal ~38 MB XML na obec,
+   tedy jednotky GB rozbaleného XML na okres, a parsování GML je pomalejší než shapefile.
+   Hodnotitelé spouštějí import u sebe, takže na jeho délce záleží.
+3. **Hranice KÚ jsou ve stejném ZIPu** (`KATASTRALNI_UZEMI_P`), takže vrstvu pro nízké zoomy
+   mám bez dalšího zdroje.
+4. Jediná slabina SHP — atributy ve vedlejší vrstvě — je měřením ověřený přesný join 1:1.
+
+Co tím ztrácím a kdy bych volil VFR: VFR má způsob ochrany pozemku a bonitované díly (BPEJ)
+a číslo parcely strukturovaně (`KmenoveCislo` + `PododdeleniCisla` + `DruhCislovaniKod`) místo
+zobrazovacího řetězce `TEXT_KM`. Kdyby aplikace měla řešit cenu nebo ochranu pozemků, sáhnu
+po VFR, nebo oba zdroje spojím přes `ID_2` = `pai:Id`, což je ověřeně tentýž identifikátor.
+
+## Výsledek importu celého okresu (měřeno)
+
+Jeden běh, `docker compose run --rm import`, data z 2026-10-02:
+
+| Údaj | Hodnota |
+|---|---|
+| katastrálních území | 240 z 240, všechna s geometrií |
+| parcel | 272 111 |
+| doba importu | 112 s |
+| nestažená KÚ | 0 |
+| geometrie bez atributů | 0 |
+| atributy bez geometrie | 0 |
+| parcel bez druhu pozemku | 0 |
+| parcel bez výměry | 0 |
+| nevalidních geometrií (`ST_IsValid`) | 0 |
+| parcel bez způsobu využití | 203 493 (75 %, ve zdroji `****`) |
+| vrcholů celkem | 3 424 415 (průměr 12,6 na parcelu, maximum 562) |
+| tabulka `parcela` | 81 MB dat + 12 MB GiST index |
+| celá databáze | 226 MB |
+| bbox okresu (WGS84) | 15,1042–15,7416 E, 50,2753–50,5470 N |
+
+Při importu GDAL 14× ohlásil `Warning 1: Non closed ring detected` a prstenec sám uzavřel.
+Výsledek to nepoškodilo, `ST_IsValid` je po importu bez jediné chyby.
+
+### Počet parcel proti statistice ČÚZK
+
+Naimportováno 272 111, sestava `OBJEKTY` k 1. 1. 2025 uvádí 276 683, tedy **−4 572 (−1,65 %)**.
+Nejdřív to vypadalo na chybějící data, protože na vzorku obce Jičín šel trend opačně (+0,65 %).
+Rozpad po KÚ: 127 KÚ má parcel víc, 83 stejně, 30 méně. Nárůsty jsou malé (+0,3 až +2,8 %),
+propady velké a soustředěné do jedné části okresu (Zliv u Libáně 53 %, Psinice 64 %,
+Křešice u Psinic 67 %, Nadslav 70 %, Libáň 72 %, Bašnice 78 %) — to je podpis komplexních
+pozemkových úprav, které parcely scelují.
+
+Ověřil jsem to geometricky, ne odhadem: parcely musí katastrální území vyplnit beze zbytku.
+Součet atributových výměr proti ploše polygonu KÚ (obojí přepočteno do S-JTSK):
+
+| KÚ | parcel | výměra z atributů | plocha KÚ | pokrytí |
+|---|---|---|---|---|
+| Zliv u Libáně | 491 | 387,2 ha | 387,2 ha | 100,0 % |
+| Psinice | 854 | 547,9 ha | 547,9 ha | 100,0 % |
+| Křešice u Psinic | 558 | 348,8 ha | 348,8 ha | 100,0 % |
+| Libáň | 2 819 | 683,3 ha | 683,3 ha | 100,0 % |
+| Bašnice | 1 465 | 612,7 ha | 612,6 ha | 100,0 % |
+| Jičín | 12 288 | 1 208,2 ha | 1 208,2 ha | 100,0 % |
+| Nová Paka | 8 231 | 718,9 ha | 718,9 ha | 100,0 % |
+| Hořice v Podkrkonoší | 8 363 | 843,4 ha | 843,4 ha | 100,0 % |
+
+Pokrytí 100 % i u KÚ s největším propadem počtu znamená, že nechybí data — parcel je skutečně
+méně, protože jsou větší. Vedlejší zisk: shoda atributové výměry s plochou polygonu na 0,1 %
+je nezávislé potvrzení, že transformace S-JTSK → Web Mercator při importu je v pořádku
+a že atributy patří ke správné geometrii.
+
+KÚ Jičín má 12 288 parcel, což přesně odpovídá samostatnému měření shapefilu před importem.
+
+## Čeho jsem si všiml při stavbě importu
+
+- `ogr2ogr` neumí `-select` společně s `-append` („if -append is specified, -select cannot be
+  used“). Sloupce se musí vybrat přes `-sql`.
+- `COPY ... WITH (FORMAT csv)` mapuje prázdné pole na NULL, ne na prázdný řetězec. Filtr
+  ukončených záznamů `plati_do = ''` proto nevybral nic a seznam KÚ vyšel prázdný.
+  Správně je `plati_do IS NULL`. Z 6 259 obcí má `plati_do` vyplněno jediná.
+- `COPY` umí `ENCODING 'WIN1250'`, takže CSV od ČÚZK jde načíst bez převodu přes `iconv`.
+- Seznam 240 KÚ není v repozitáři vypsaný ručně. Dopočítá se v SQL z číselníků RÚIAN podle
+  kódu okresu, takže import jde přesměrovat na jiný okres změnou jedné proměnné.
+- Odkaz na Nahlížení do KN se zatím nepovedlo ověřit jako stabilní. `ZobrazObjekt.aspx?typ=
+  parcela&id=<id>` vrátil jednou HTTP 200, při druhém pokusu HTTP 302 na ochrannou stránku,
+  takže deep link nejspíš potřebuje session. Do UI ho nedám, dokud ho neověřím.

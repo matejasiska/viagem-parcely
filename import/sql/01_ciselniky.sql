@@ -46,8 +46,10 @@ SELECT k.kod::integer AS kod,
        o.nazev AS obec_nazev
 FROM stg_ku k
 JOIN stg_obec o ON o.kod = k.obec_kod
+-- COPY ve formátu CSV mapuje prázdné pole na NULL, ne na prázdný řetězec,
+-- takže ukončené záznamy se filtrují přes IS NULL.
 WHERE o.okres_kod = :'okres'
-  AND k.plati_do = ''
-  AND o.plati_do = '';
+  AND k.plati_do IS NULL
+  AND o.plati_do IS NULL;
 
 ALTER TABLE ku_okresu ADD PRIMARY KEY (kod);
