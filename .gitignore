@@ -1,4 +1,18 @@
+# Stažená data ČÚZK a cache dlaždic drží pojmenované docker volumes.
+# Tyhle vzory jsou pojistka pro případ, že by někdo importoval mimo kontejner.
 /data/
-/vendor/
 /cache/
+*.zip
+*.shp
+*.dbf
+*.shx
+*.prj
+*.cpg
+
+# Lokální konfigurace. Přihlašovací údaje k databázi jsou záměrně
+# v docker-compose.yml, aby šla aplikace spustit bez dalšího nastavování.
+.env
+.env.local
+
+/vendor/
 .idea/
