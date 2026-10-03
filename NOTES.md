@@ -176,7 +176,7 @@ Jeden běh, `docker compose run --rm import`, data z 2026-10-02:
 | parcel bez druhu pozemku | 0 |
 | parcel bez výměry | 0 |
 | nevalidních geometrií (`ST_IsValid`) | 0 |
-| parcel bez způsobu využití | 203 493 (75 %, ve zdroji `****`) |
+| parcel bez způsobu využití | 203 493 ze 272 111 (viz rozbor níže) |
 | vrcholů celkem | 3 424 415 (průměr 12,6 na parcelu, maximum 562) |
 | tabulka `parcela` | 81 MB dat + 12 MB GiST index |
 | celá databáze | 226 MB |
@@ -184,6 +184,33 @@ Jeden běh, `docker compose run --rm import`, data z 2026-10-02:
 
 Při importu GDAL 14× ohlásil `Warning 1: Non closed ring detected` a prstenec sám uzavřel.
 Výsledek to nepoškodilo, `ST_IsValid` je po importu bez jediné chyby.
+
+### Chybějící způsob využití pozemku není díra v datech
+
+U 203 493 parcel ze 272 111 (74,8 %) je `zpusob_vyuziti_kod` prázdný. Ve zdrojovém shapefilu
+má takový záznam v poli `ZPVYPA_KOD` hodnotu `****`, kterou GDAL převede na NULL.
+
+Jestli je to v pořádku, rozhodne číselník `SC_D_POZEMKU`: má sloupec `POVINNY_ZPUSOB_VYUZ`,
+který říká, u kterých druhů pozemku musí být způsob využití vyplněný. Rozpad podle toho:
+
+| Druh pozemku | způsob využití povinný | parcel | chybí |
+|---|---|---|---|
+| ostatní plocha | ano | 53 356 | 0 |
+| vodní plocha | ano | 13 775 | 0 |
+| orná půda | ne | 65 993 | 65 965 |
+| zastavěná plocha a nádvoří | ne | 48 036 | 47 031 |
+| trvalý travní porost | ne | 39 048 | 38 755 |
+| zahrada | ne | 36 918 | 36 906 |
+| lesní pozemek | ne | 11 477 | 11 333 |
+| ovocný sad | ne | 3 506 | 3 501 |
+| vinice | ne | 2 | 2 |
+
+Souhrnně: tam, kde je způsob využití povinný, je vyplněný u **všech 67 131 parcel, chybí nula**.
+Kde povinný není, chybí u 203 493 z 204 980 a vyplněný je jen výjimečně. Jde tedy o normální
+stav katastru, ne o neúplný import.
+
+Vedlejší zjištění: v okrese se vyskytuje jen 9 z 11 druhů pozemku číselníku. Chmelnice tu
+není žádná a vinice jen dvě parcely.
 
 ### Počet parcel proti statistice ČÚZK
 
