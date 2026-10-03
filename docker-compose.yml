@@ -32,6 +32,31 @@ services:
         condition: service_healthy
     restart: "no"
 
+  php:
+    build: ./docker/php
+    environment:
+      DB_DSN: "pgsql:host=db;port=5432;dbname=katastr"
+      DB_USER: katastr
+      DB_PASSWORD: katastr
+    volumes:
+      - ./public:/app/public:ro
+      - ./src:/app/src:ro
+      - tile-cache:/app/cache
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/app/public:ro
+    depends_on:
+      - php
+
 volumes:
   db-data:
   import-cache:
+  tile-cache:

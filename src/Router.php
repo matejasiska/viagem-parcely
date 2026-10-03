@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Katastr;
+
+final class Router
+{
+    /** @var list<array{string, callable}> */
+    private array $routes = [];
+
+    /**
+     * Vzor je regulární výraz bez ohraničení, pojmenované skupiny se předají obsluze
+     * jako pole, například '/api/parcela/(?<id>\d+)'.
+     */
+    public function get(string $pattern, callable $handler): void
+    {
+        $this->routes[] = [$pattern, $handler];
+    }
+
+    public function dispatch(string $method, string $path): void
+    {
+        foreach ($this->routes as [$pattern, $handler]) {
+            if (preg_match('#^' . $pattern . '$#', $path, $matches) !== 1) {
+                continue;
+            }
+
+            if ($method !== 'GET') {
+                Response::error(405, 'Tento endpoint podporuje jen GET.');
+
+                return;
+            }
+
+            $handler(array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+
+            return;
+        }
+
+        Response::error(404, 'Neznámý endpoint.');
+    }
+}
