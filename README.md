@@ -43,6 +43,51 @@ Vynutit nový import jde přes:
 docker compose down -v && docker compose up
 ```
 
+## Jak to funguje
+
+Mapa má dvě vrstvy a přepíná je podle zoomu:
+
+- **do zoomu 13** hranice a názvy katastrálních území. Celý okres je 9 dlaždic a 187 kB,
+  takže se otevře hned. Kreslit 272 tisíc parcel v tomhle zoomu nemá smysl, byly by menší
+  než pixel.
+- **od zoomu 14** parcely, obarvené podle druhu pozemku. Kliknutím na parcelu se vpravo
+  otevře detail s výměrou, druhem pozemku, způsobem využití, katastrálním územím a obcí,
+  tedy názvy z číselníků, ne kódy. Od zoomu 17 se vykresluje i číslo parcely.
+
+Vlevo nahoře je hledání podle čísla parcely, volitelně zúžené na katastrální území.
+Zadání `941` najde i `941/9`, protože kmenové číslo bez poddělení je běžný vstup.
+
+Dlaždice se generují v PostGIS přes `ST_AsMVT` a ukládají se na disk. Díky tomu jde změnit
+styl nebo filtr bez přegenerování celé sady, a druhé zobrazení téhož místa je z cache.
+
+### Výkon
+
+Měřeno lokálně, jedním procesem `curl` přes celou sadu dlaždic:
+
+| Pohled | dlaždic | objem | studená cache | teplá cache |
+|---|---|---|---|---|
+| celý okres (hranice KÚ, z10) | 9 | 187 kB | 409 ms | 53 ms |
+| Jičín, parcely, z14 (5×5) | 25 | 1 932 kB | 1 378 ms | 145 ms |
+| Jičín, parcely, z16 (5×5) | 25 | 508 kB | 675 ms | 142 ms |
+
+Z cache vydá server dlaždici za 5,8 ms bez ohledu na vrstvu.
+
+Zjednodušení geometrie podle zoomu jsem změřil a nepoužil: ubralo 12 až 18 % objemu, ale
+zároveň z dlaždice vypadly drobné parcely. Podrobně v [NOTES.md](NOTES.md).
+
+## Endpointy
+
+| Endpoint | Co vrací |
+|---|---|
+| `GET /api/okres` | rozsah okresu, počty, datum dat |
+| `GET /api/parcela/{id}` | detail parcely, `id` je identifikátor parcely v ISKN/RÚIAN |
+| `GET /api/parcely?cislo=&ku=` | hledání parcely, nejvýš 50 výsledků |
+| `GET /dlazdice/parcely/{z}/{x}/{y}.pbf` | vektorové dlaždice parcel, zoom 14 až 16 |
+| `GET /dlazdice/katastralni-uzemi/{z}/{x}/{y}.pbf` | hranice KÚ, zoom 0 až 12 |
+
+Nad horní hranicí zoomu si dlaždice dopočítá MapLibre přeskalováním, server stejný obsah
+negeneruje znovu. Prázdná dlaždice vrací `204`.
+
 ## Ověření importu
 
 Import si na konci sám vypíše kontroly. Ručně:
@@ -77,6 +122,6 @@ veřejný detail ve Veřejném dálkovém přístupu k RÚIAN.
 docker-compose.yml   databáze, import, PHP-FPM, nginx
 db/init/             schéma, spustí se při prvním startu databáze
 import/              stahování z ČÚZK a import do PostGIS (GDAL + psql)
-src/                 backend: router, repozitáře, dlaždice
-public/              mapa a front controller
+src/                 backend: router, repozitáře, controllery
+public/              front controller a mapa (MapLibre GL)
 ```
