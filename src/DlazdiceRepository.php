@@ -56,10 +56,24 @@ final class DlazdiceRepository
         return $this->mvt($sql, $z, $x, $y);
     }
 
+    /**
+     * ST_AsMVT vrací bytea. Přenáší se jako base64, protože zacházení s bytea se mezi
+     * verzemi PDO liší. Prázdný výsledek znamená, že v dlaždici nejsou žádná data.
+     */
     private function mvt(string $sql, int $z, int $x, int $y): string
     {
         $base64 = $this->db->fetchValue($sql, ['z' => $z, 'x' => $x, 'y' => $y]);
 
-        return $base64 === null ? '' : base64_decode($base64, true);
+        if ($base64 === null) {
+            return '';
+        }
+
+        $mvt = base64_decode((string) $base64, true);
+
+        if ($mvt === false) {
+            throw new \RuntimeException('Dlaždici se nepovedlo dekódovat z base64.');
+        }
+
+        return $mvt;
     }
 }

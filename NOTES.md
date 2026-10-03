@@ -374,3 +374,52 @@ KÚ Jičín má 12 288 parcel, což přesně odpovídá samostatnému měření 
 - `COPY` umí `ENCODING 'WIN1250'`, takže CSV od ČÚZK jde načíst bez převodu přes `iconv`.
 - Seznam 240 KÚ není v repozitáři vypsaný ručně. Dopočítá se v SQL z číselníků RÚIAN podle
   kódu okresu, takže import jde přesměrovat na jiný okres změnou jedné proměnné.
+
+## Výkon dlaždic (měřeno)
+
+Měřeno jedním procesem `curl` přes všechny URL sady. Nejdřív jsem měřil jedním procesem na
+dlaždici a dostával 130 ms i z cache — to bylo startování procesu na Windows, ne server.
+Druhá chyba: `curl -o /dev/null` s více URL přesměruje jen první odpověď, zbytek jde na stdout,
+takže se počítala jedna dlaždice místo všech.
+
+### Zobrazení celého okresu
+
+| Pohled | dlaždic | prázdných | celkem | největší | studená cache | teplá cache |
+|---|---|---|---|---|---|---|
+| celý okres, hranice KÚ, z10 | 9 | 3 | 187 kB | 106 kB | 409 ms | 53 ms |
+| celý okres, hranice KÚ, z11 | 20 | 5 | 215 kB | 38 kB | 579 ms | 116 ms |
+| Jičín, parcely, z14 (5×5) | 25 | 0 | 1 932 kB | 286 kB | 1 378 ms | 145 ms |
+| Jičín, parcely, z16 (5×5) | 25 | 0 | 508 kB | 36 kB | 675 ms | 142 ms |
+
+Na celý okres se tedy stáhne **9 dlaždic a 187 kB**, protože pod zoomem 14 se místo parcel
+kreslí hranice katastrálních území. Cache na disku zrychluje vydání dlaždice z 27–55 ms
+na konstantních **5,8 ms** bez ohledu na vrstvu.
+
+Dlaždice parcel za celý okres v zoomu 14 je 630 dlaždic a 18,5 MB, generování všech trvalo 59 s.
+To ale nikdo nestahuje celé — na obrazovce je jich zároveň jednotky.
+
+### Zjednodušení geometrie: změřeno a zamítnuto
+
+Chtěl jsem podle plánu zjednodušovat geometrii podle zoomu. Na nejhustší dlaždici
+(z14 nad Jičínem, 4 525 parcel) to vypadá takto:
+
+| Varianta | bajtů | vrcholů | parcel v dlaždici |
+|---|---|---|---|
+| bez zjednodušení | 293 804 | 57 294 | 4 525 |
+| `ST_SimplifyPreserveTopology`, tolerance 1 jednotka MVT | 257 265 | 38 875 | 4 523 |
+| tolerance 4 jednotky MVT | 241 957 | 31 305 | 4 517 |
+
+Zjednodušení ubere 12 až 18 % objemu, ale **ubere i parcely** — drobné parcely se při
+zjednodušení složí do ničeho a z dlaždice vypadnou. V aplikaci, kde se na parcelu kliká
+a čtou se k ní údaje, je tiše zmizelá parcela horší vada než 12 % bajtů. Nepoužívám ho.
+
+Důvod, proč je přínos tak malý: `ST_AsMVTGeom` sám kvantizuje souřadnice na mřížku dlaždice
+a redundantní vrcholy zahodí, takže většina úspory už je v něm.
+
+### Co se v dlaždici ztratí i bez zjednodušení
+
+Kvantizace na mřížku 4096 × 4096 zahodí parcely menší než jedna jednotka mřížky. Na stejné
+dlaždici: 4 535 parcel ji protíná, 4 525 se do MVT dostane, **10 zanikne** (0,22 %).
+V zoomu 16 je to 392 proti 391, tedy jedna parcela. Klikatelné jsou proto všechny parcely
+teprve ve vyšších zoomech; na nejnižším zoomu, kde se parcely vůbec kreslí, chybí dvě promile
+těch nejmenších. Je to vlastnost formátu, ne importu — v databázi jsou všechny.

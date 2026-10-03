@@ -34,7 +34,8 @@ final class KatastralniUzemiRepository
 
         $radek = $this->db->fetchRow($sql);
 
-        if ($radek === null || $radek['min_lon'] === null) {
+        // Bez geometrie nebo bez záznamu o importu nemá mapa co zobrazit.
+        if ($radek === null || $radek['min_lon'] === null || $radek['datum_dat'] === null) {
             return ['naimportovano' => false];
         }
 
