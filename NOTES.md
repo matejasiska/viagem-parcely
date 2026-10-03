@@ -77,10 +77,16 @@ Pro tuhle úlohu nepřináší nic, co nemají zdroje A a C.
 
 ### C) Výměnný formát RÚIAN (VFR), po obcích
 
-`https://services.cuzk.gov.cz/vfr/<YYYYMM>/<YYYYMMDD>_OB_<kod_obce>_UKSH.xml.zip`
+Dvě různá místa, obojí ověřeno:
 
-Adresu jsem musel dohledat; stránka ČÚZK o VFR predikovatelný vzor neuvádí, jen říká, že URL
-„lze predikovat z data generování“. Skutečný vzor jsem našel až v listingu `/vfr/`.
+- aktuální stav: `https://vdp.cuzk.gov.cz/vymenny_format/soucasna/<YYYYMMDD>_OB_<kod_obce>_UKSH.xml.zip`
+- archiv: `https://services.cuzk.gov.cz/vfr/<YYYYMM>/<YYYYMMDD>_OB_<kod_obce>_UKSH.xml.zip`
+
+`YYYYMMDD` je u souborů po obcích **poslední den měsíce** (`20260930`, `20260831`), u souborů
+za celý stát třetí den měsíce (`20260903`). Na téhle konvenci jsem se spletl, viz níže.
+
+Stránka ČÚZK o VFR predikovatelný vzor neuvádí, jen říká, že URL „lze predikovat z data
+generování“. Přímé odkazy vydá generátor ve VDP (`/vdp/ruian/vymennyformat`).
 
 - obec Jičín (572659), stav 2026-07-31: ZIP 3 838 579 B → **38 004 807 B XML** (38 MB)
 - jeden soubor pokrývá celou obec, tedy několik KÚ (obec Jičín = 5 KÚ)
@@ -113,14 +119,19 @@ Zdroje se shodují. Na Popovicích identicky, na Jičíně se rozdíl 14 parcel 
 mezi stavy (dělení a scelování parcel). Křížová kontrola proti sestavě `OBJEKTY` (stav 2025-01-01)
 na stejných pěti KÚ obce Jičín: 16 840 → 16 950, tedy **+110 parcel (+0,65 %) za 19 měsíců**.
 
-### Stáří dat: zjištěné omezení VFR
+### Dostupnost aktuálního VFR: moje chyba
 
-Archiv `/vfr/` sahá od `201508` do **`202607`**. Měsíce `202608`, `202609` a `202610` vracejí 404,
-přesto že dnes je říjen 2026. Úplné kopie VFR se generují měsíčně, ale tenhle veřejný adresář je
-archiv — aktuální soubory se vydávají přes aplikaci VDP, která není čistý strojový endpoint.
+Nejdřív jsem napsal, že aktuální VFR nejde stáhnout strojově a že predikovatelná adresa dává
+jen data dva měsíce stará. **To bylo špatně.** Archiv `services.cuzk.gov.cz/vfr/` opravdu končí
+u `202607`, ale je to jen archiv. Aktuální soubory leží v
+`vdp.cuzk.gov.cz/vymenny_format/soucasna/` a stahují se běžným GETem bez session.
 
-Predikovatelnou adresou se tedy z VFR dostanu jen na data **2 měsíce stará**, zatímco SHP je
-týdenní. Pro reprodukovatelný `docker compose up` je to rozdíl, který stojí za zvážení.
+Spletl jsem se v datu v názvu souboru: zkoušel jsem `20260901` a `20260101`, zatímco soubory
+po obcích nesou datum posledního dne měsíce. Čtyři odpovědi 404 jsem si vyložil jako
+nedostupnost celé služby, místo abych si ověřil konvenci pojmenování.
+
+Doměřeno HEAD dotazem na všech **111 obcí** okresu Jičín, soubor `20260930_OB_<kod>_UKSH.xml.zip`:
+**111 dostupných, 0 nedostupných.** Aktuální VFR strojově dostupné je a bylo 3 dny staré.
 
 ## Nástroje a prostředí (ověřeno)
 
@@ -141,25 +152,49 @@ Druh pozemku 13 má `STAVEBNI_PARCELA = a`; odtud pochází prefix `st.` v `TEXT
 
 ## Rozhodnutí: zdroj dat je SHP po KÚ
 
-Vybral jsem **A) SHP katastrální mapy po katastrálních územích**.
+Vybral jsem **A) SHP katastrální mapy po katastrálních územích**. Rozhodnutí původně stálo na
+dvou argumentech, které pozdější měření vyvrátilo, takže ho uvádím znovu a poctivě.
 
-Důvody, v pořadí důležitosti:
+### Co měření vyvrátilo
 
-1. **Aktuálnost.** SHP se generuje týdně a má stabilní predikovatelnou URL. VFR se přes
-   predikovatelnou adresu dá stáhnout jen 2 měsíce staré (archiv končí u `202607`), aktuální
-   soubory jdou přes aplikaci VDP, což není strojový endpoint. Pro reprodukovatelný
-   `docker compose up` je stabilní adresa důležitější než bohatší atributy.
-2. **Objem a rychlost importu.** SHP je nativní driver GDAL. VFR by znamenal ~38 MB XML na obec,
-   tedy jednotky GB rozbaleného XML na okres, a parsování GML je pomalejší než shapefile.
-   Hodnotitelé spouštějí import u sebe, takže na jeho délce záleží.
-3. **Hranice KÚ jsou ve stejném ZIPu** (`KATASTRALNI_UZEMI_P`), takže vrstvu pro nízké zoomy
-   mám bez dalšího zdroje.
-4. Jediná slabina SHP — atributy ve vedlejší vrstvě — je měřením ověřený přesný join 1:1.
+Původní důvod 1 byl „aktuální VFR nejde stáhnout strojově“. Nepravda, viz výše — 111 ze 111
+obcí je dostupných a data byla 3 dny stará.
 
-Co tím ztrácím a kdy bych volil VFR: VFR má způsob ochrany pozemku a bonitované díly (BPEJ)
-a číslo parcely strukturovaně (`KmenoveCislo` + `PododdeleniCisla` + `DruhCislovaniKod`) místo
-zobrazovacího řetězce `TEXT_KM`. Kdyby aplikace měla řešit cenu nebo ochranu pozemků, sáhnu
-po VFR, nebo oba zdroje spojím přes `ID_2` = `pai:Id`, což je ověřeně tentýž identifikátor.
+Původní důvod 2 byl „SHP je menší a import z něj je rychlejší“. Taky nepravda. Změřeno na
+stejné ploše (obec Jičín, 5 KÚ, zhruba 16 950 parcel), oba zdroje do stejné databáze:
+
+| | SHP po KÚ | VFR po obcích |
+|---|---|---|
+| ke stažení za celý okres | 105 MB (240 ZIPů) | **53 MB** (111 ZIPů) |
+| rozbalený vstup pro tuhle plochu | 7,4 MB | 37,1 MB (jeden XML) |
+| načtení do PostGIS | 1,41 s | **0,73 s** |
+| parcel vloženo | 16 955 | 16 950 |
+
+VFR má poloviční objem ke stažení — SHP ZIPy nesou i budovy, bodové pole, texty a další vrstvy
+mapy, které v aplikaci nepoužívám — a na tomhle vzorku se načetl dvakrát rychleji. Rozbalené XML
+je sice pětkrát větší než shapefilový vstup, ale import maže rozbalená data po každé jednotce,
+takže na disku leží jen jedna obec.
+
+### Proč u SHP přesto zůstávám
+
+1. **Je naimportovaný a geometricky ověřený.** 272 111 parcel, pokrytí katastrálních území
+   na 100,000 %, definiční body v polygonech 12 288 z 12 288. Přechod na VFR by znamenal celou
+   verifikaci zopakovat bez funkčního přínosu pro zadání: aplikace má zobrazit parcelu a její
+   údaje, a na to SHP stačí.
+2. **Týdenní aktualizace** proti měsíční u VFR (SHP 2026-10-02, VFR 2026-09-30).
+3. **Jednodušší driver.** Shapefile má jednu geometrii na vrstvu a explicitní `.prj`. Vrstva
+   `Parcely` ve VFR má tři geometrické sloupce a je potřeba vybrat ten správný.
+
+### Co tím ztrácím
+
+Poctivě řečeno je VFR na většině měřených os lepší. Má bohatší atributy (způsob ochrany pozemku,
+bonitované díly BPEJ), číslo parcely strukturovaně (`KmenoveCislo` + `PododdeleniCisla` +
+`DruhCislovaniKod`) místo zobrazovacího řetězce `TEXT_KM`, geometrii i atributy v jedné vrstvě
+bez joinu a poloviční objem ke stažení. Kdybych vybíral znovu s těmito čísly v ruce, je VFR
+nejméně stejně dobrá volba.
+
+Oba zdroje jde spojit přes `ID_2` = `pai:Id`, což je ověřeně tentýž identifikátor. Doplnit
+z VFR ochranu pozemku nebo BPEJ k už naimportovaným datům je tedy přírůstková práce, ne přepis.
 
 ## Výsledek importu celého okresu (měřeno)
 
