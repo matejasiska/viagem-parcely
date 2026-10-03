@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parcely okresu Jičín</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.0/maplibre-gl.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div id="mapa"></div>
+
+<div class="karta" id="hledani">
+    <form id="formular-hledani">
+        <input name="cislo" placeholder="Číslo parcely, např. 941/9" autocomplete="off" required>
+        <input name="ku" placeholder="Katastrální území (nepovinné)" autocomplete="off">
+        <button type="submit">Najít</button>
+    </form>
+    <p class="napoveda" id="napoveda-hledani"></p>
+    <ul id="vysledky"></ul>
+</div>
+
+<div class="karta" id="panel" hidden>
+    <button type="button" id="zavrit" aria-label="Zavřít detail">&times;</button>
+    <h2 id="panel-cislo"></h2>
+    <dl id="panel-udaje"></dl>
+    <a id="panel-odkaz" target="_blank" rel="noopener">Detail v RÚIAN</a>
+</div>
+
+<div class="karta" id="legenda">
+    <div id="legenda-druhy"></div>
+    <p class="napoveda" id="legenda-stav"></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.0/maplibre-gl.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

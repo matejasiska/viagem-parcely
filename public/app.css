@@ -1,0 +1,97 @@
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    height: 100%;
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #1d2127;
+}
+
+#mapa { position: absolute; inset: 0; }
+
+.karta {
+    position: absolute;
+    z-index: 1;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+    padding: 12px;
+}
+
+#hledani { top: 10px; left: 10px; width: 280px; }
+
+#formular-hledani { display: grid; gap: 6px; }
+
+#formular-hledani input {
+    padding: 7px 8px;
+    border: 1px solid #c3c8d0;
+    border-radius: 4px;
+    font: inherit;
+}
+
+#formular-hledani button {
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: #2f5d8a;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+#formular-hledani button:hover { background: #24486c; }
+
+.napoveda { margin: 8px 0 0; color: #5d6470; font-size: 12px; }
+
+#vysledky { list-style: none; margin: 8px 0 0; padding: 0; max-height: 40vh; overflow-y: auto; }
+
+#vysledky li {
+    padding: 6px 8px;
+    border-top: 1px solid #e8eaee;
+    cursor: pointer;
+}
+
+#vysledky li:hover { background: #eef3f8; }
+
+#vysledky b { font-weight: 600; }
+#vysledky span { display: block; color: #5d6470; font-size: 12px; }
+
+#panel { top: 10px; right: 10px; width: 300px; }
+
+#panel h2 { margin: 0 24px 10px 0; font-size: 17px; }
+
+#zavrit {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: 0;
+    background: none;
+    font-size: 22px;
+    line-height: 1;
+    color: #5d6470;
+    cursor: pointer;
+}
+
+#panel-udaje { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0 0 12px; }
+#panel-udaje dt { color: #5d6470; }
+#panel-udaje dd { margin: 0; font-weight: 500; }
+
+#panel-odkaz { color: #2f5d8a; }
+
+#legenda { bottom: 10px; left: 10px; max-width: 280px; }
+
+.druh { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+
+.druh i {
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(0, 0, 0, .35);
+    border-radius: 2px;
+    flex: 0 0 auto;
+}
+
+@media (max-width: 700px) {
+    #hledani, #panel { width: auto; left: 10px; right: 10px; }
+    #panel { top: auto; bottom: 10px; }
+    #legenda { display: none; }
+}
