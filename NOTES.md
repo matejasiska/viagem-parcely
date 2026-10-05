@@ -398,6 +398,41 @@ na konstantních **5,8 ms** bez ohledu na vrstvu.
 Dlaždice parcel za celý okres v zoomu 14 je 630 dlaždic a 18,5 MB, generování všech trvalo 59 s.
 To ale nikdo nestahuje celé — na obrazovce je jich zároveň jednotky.
 
+### Od kterého zoomu kreslit parcely: z12, z13, z14
+
+Zkoušel jsem posunout parcely níž, na z13 nebo z12. Kritérium předem: z13 projde, když na
+stejnou obrazovku stáhne nejvýš zhruba dvojnásobek z14 a žádná dlaždice v okrese nemá přes
+~500 kB.
+
+„Pohled“ je 5 × 5 dlaždic kolem středu KÚ Jičín, tedy stejně velká obrazovka (1280 × 1280 px)
+v každém zoomu. Studená cache = smazaná cache dlaždic, databáze už zahřátá. Dva běhy, oba
+uvedené:
+
+| Pohled 5 × 5 | objem | největší dlaždice | studená cache | teplá cache |
+|---|---|---|---|---|
+| z14 | 1 989 kB | 294 kB | 1 537 / 1 459 ms | 219 / 184 ms |
+| z13 | 4 981 kB | 686 kB | 2 514 / 2 191 ms | 183 / 187 ms |
+| z12 | 12 635 kB | 1 292 kB | 4 009 / 3 940 ms | 204 / 198 ms |
+
+Celý okres (všechny dlaždice v bboxu okresu), kvůli maximální velikosti jedné dlaždice:
+
+| Zoom | dlaždic | prázdných | celkem | medián neprázdné | největší | nejpomalejší generování |
+|---|---|---|---|---|---|---|
+| z14 | 600 | 164 | 18 913 kB | 39 kB | 352 kB | 117 ms |
+| z13 | 176 | 51 | 17 617 kB | 133 kB | 686 kB | 199 ms |
+| z12 | 54 | 14 | 16 824 kB | 408 kB | 1 292 kB | 365 ms |
+
+**Zamítnuto, parcely zůstávají od z14.** z13 nesplňuje ani jedno kritérium: na obrazovku
+stáhne 2,5× víc než z14 a nejtěžší dlaždice má 686 kB, další dvě 559 a 419 kB. z12 je
+6,4× objem z14 a medián dlaždice je 408 kB. Objem za celý okres je ve všech zoomech podobný
+(17–19 MB, jsou to tytéž parcely), ale v nižším zoomu se vejde na jednu obrazovku větší díl
+okresu, takže se na jednu obrazovku stahuje víc.
+
+Při měření jsem se spletl: mazání cache přes `docker compose exec php rm -rf /app/cache/...`
+z Git Bash nic nesmazalo, protože MSYS přepsal cestu `/app/...` na cestu ve Windows. První
+série „studených“ měření byla ve skutečnosti z cache. Opraveno přes `sh -c '...'` a výpis
+adresáře po smazání.
+
 ### Zjednodušení geometrie: změřeno a zamítnuto
 
 Chtěl jsem podle plánu zjednodušovat geometrii podle zoomu. Na nejhustší dlaždici
