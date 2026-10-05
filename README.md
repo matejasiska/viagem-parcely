@@ -75,6 +75,44 @@ Z cache vydá server dlaždici za 5,8 ms bez ohledu na vrstvu.
 Zjednodušení geometrie podle zoomu jsem změřil a nepoužil: ubralo 12 až 18 % objemu, ale
 zároveň z dlaždice vypadly drobné parcely. Podrobně v [NOTES.md](NOTES.md).
 
+## Výklad zadání
+
+### Celý okres zobrazuje hranice katastrálních území, ne parcely
+
+Zadání chce, aby aplikace plynule fungovala i při zobrazení celého okresu. Vykládám to tak,
+že celý okres musí jít zobrazit a posouvat bez čekání, ale ne že se v tom měřítku musí kreslit
+jednotlivé parcely. Parcela by tam byla menší než pixel.
+
+Plocha parcely spočítaná z polygonů v S-JTSK, všech 272 111 parcel:
+
+| | plocha |
+|---|---|
+| průměr | 3 259 m² |
+| medián | 557 m² |
+| 25. percentil | 149 m² |
+| 75. percentil | 2 274 m² |
+
+Průměr táhnou nahoru velké lány polí a lesů, typickou parcelu popisuje spíš medián.
+
+Rozlišení mapy pro zeměpisnou šířku středu okresu (50,41° s. š.). MapLibre počítá zoom
+s dlaždicí 512 px, takže m/px = 40 075 017 · cos(φ) / (512 · 2^z). Strana parcely je strana
+čtverce se stejnou plochou:
+
+| Zoom | m/px | strana mediánové parcely | strana průměrné parcely |
+|---|---|---|---|
+| z10 | 48,7 | 0,5 px | 1,2 px |
+| z11 | 24,4 | 1,0 px | 2,3 px |
+| z12 | 12,2 | 1,9 px | 4,7 px |
+| z13 | 6,1 | 3,9 px | 9,4 px |
+| z14 | 3,0 | 7,7 px | 18,8 px |
+
+Celý okres (bbox 45 × 30 km) se na obrazovku Full HD vejde zhruba v zoomu 10. Tam má
+mediánová parcela půl pixelu a i průměrná jen jeden. Teprve od zoomu 13 až 14 je typická
+parcela útvar o straně několika pixelů, na který jde kliknout. Proto se na celém okrese
+kreslí hranice 240 katastrálních území (9 dlaždic, 187 kB) a parcely od zoomu 14.
+Zkoušel jsem kreslit parcely už od z13 a z12. Zamítnul jsem to podle objemu dlaždic,
+podrobně v [NOTES.md](NOTES.md).
+
 ## Endpointy
 
 | Endpoint | Co vrací |
