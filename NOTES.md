@@ -233,13 +233,11 @@ a atributy, 1,75 s celá smyčka) tedy z velké části není rychlost formátu,
 
 ### Proč u SHP přesto zůstávám
 
-1. **Je naimportovaný a geometricky ověřený.** 272 111 parcel, pokrytí katastrálních území
-   na 100,000 %, definiční body v polygonech 12 288 z 12 288. Přechod na VFR by znamenal celou
-   verifikaci zopakovat bez funkčního přínosu pro zadání: aplikace má zobrazit parcelu a její
-   údaje, a na to SHP stačí.
-2. **Týdenní aktualizace** proti měsíční u VFR (SHP 2026-10-02, VFR 2026-09-30).
-3. **Jednodušší driver.** Shapefile má jednu geometrii na vrstvu a explicitní `.prj`. Vrstva
-   `Parcely` ve VFR má tři geometrické sloupce a je potřeba vybrat ten správný.
+1. **Týdenní aktualizace** proti měsíční u VFR (SHP 2026-10-02, VFR 2026-09-30).
+2. **Rozpočet úlohy.** Zadání odhaduje 4–12 h. Zjištění, že VFR je na většině os lepší,
+   přišlo až po importu celého okresu. Výměna zdroje by znamenala přepsat import a znovu
+   ověřit data, přitom funkčně by aplikace pro zadání nic nezískala: zobrazí parcelu a její
+   údaje i ze SHP. Proto jsem zdroj zpětně neměnil a rozdíly jen popsal.
 
 ### Co tím ztrácím
 
@@ -489,3 +487,10 @@ dlaždici: 4 535 parcel ji protíná, 4 525 se do MVT dostane, **10 zanikne** (0
 V zoomu 16 je to 392 proti 391, tedy jedna parcela. Klikatelné jsou proto všechny parcely
 teprve ve vyšších zoomech; na nejnižším zoomu, kde se parcely vůbec kreslí, chybí dvě promile
 těch nejmenších. Je to vlastnost formátu, ne importu — v databázi jsou všechny.
+
+## Co bych s víc časem udělal jinak
+
+- **Zdroj dat VFR místo SHP**, nebo jejich spojení. VFR má poloviční objem ke stažení, geometrii
+  i atributy v jedné vrstvě a navíc BPEJ, způsob ochrany pozemku a strukturované číslo parcely
+  (`KmenoveCislo`, `PododdeleniCisla`, `DruhCislovaniKod`). Bez přepisu importu jde VFR připojit
+  k parcelám ze SHP přes `ID_2` = `pai:Id` a doplnit jen tyto atributy.
