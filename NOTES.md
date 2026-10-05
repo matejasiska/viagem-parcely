@@ -488,6 +488,23 @@ V zoomu 16 je to 392 proti 391, tedy jedna parcela. Klikatelné jsou proto všec
 teprve ve vyšších zoomech; na nejnižším zoomu, kde se parcely vůbec kreslí, chybí dvě promile
 těch nejmenších. Je to vlastnost formátu, ne importu — v databázi jsou všechny.
 
+## Nedostupná databáze (měřeno)
+
+`GET /api/parcela/{id}`, když databáze neodpovídá:
+
+| Stav databáze | před | po `PDO::ATTR_TIMEOUT = 2` |
+|---|---|---|
+| zamrzlá (`docker compose pause db`) | 500 po 30,0 s | 500 po 2,0 s |
+| zastavená (`docker compose stop db`) | 500 po 5,0 s | 500 po 5,0 s |
+
+Nejdřív jsem dal `connect_timeout=2` do DSN a nic se nezměnilo. pdo_pgsql přidává do
+spojovacího řetězce vlastní `connect_timeout` z `PDO::ATTR_TIMEOUT` (výchozí 30 s) až za DSN,
+takže hodnotu z DSN přebije. Zastavená databáze timeout nepotřebuje: jméno `db` se vůbec
+nepřeloží a 5 s je timeout DNS resolveru v kontejneru, ne připojování.
+
+Dlaždice z cache na disku databázi nepotřebují. Po přechodu na připojení až při prvním dotazu
+se při zastavené databázi vydají normálně (200).
+
 ## Co bych s víc časem udělal jinak
 
 - **Zdroj dat VFR místo SHP**, nebo jejich spojení. VFR má poloviční objem ke stažení, geometrii

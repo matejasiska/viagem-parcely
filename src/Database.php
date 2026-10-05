@@ -13,6 +13,13 @@ use PDOStatement;
  */
 final class Database
 {
+    /**
+     * Bez limitu by při zamrzlé databázi každý požadavek visel 30 s (výchozí PDO::ATTR_TIMEOUT).
+     * Nastavuje se tady, ne v DSN: pdo_pgsql připojí connect_timeout z ATTR_TIMEOUT za DSN
+     * a ten má přednost.
+     */
+    private const TIMEOUT_PRIPOJENI_S = 2;
+
     private ?PDO $pdo = null;
 
     public function __construct(
@@ -47,6 +54,7 @@ final class Database
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => self::TIMEOUT_PRIPOJENI_S,
         ]);
 
         $statement = $this->pdo->prepare($sql);
