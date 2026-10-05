@@ -10,13 +10,13 @@ final class DlazdiceController
      * Parcely se nekreslí od nejmenších zoomů: v zoomu 12 by jedna dlaždice pokrývala
      * přes 30 km2, tedy tisíce parcel, které jsou na obrazovce menší než pixel.
      * Pod tímto zoomem se místo nich zobrazují hranice katastrálních území.
-     */
-    private const ZOOM_PARCELY = [14, 16];
-
-    /**
+     *
      * Nad horní hranicí si dlaždice dopočítá MapLibre přeskalováním (overzoom), takže
      * nemá smysl generovat samostatné dlaždice pro zoom 17 až 20 se stejným obsahem.
      */
+    private const ZOOM_PARCELY = [14, 16];
+
+    /** Hranice KÚ se v zoomu 13 a výš kreslí přeskalováním dlaždic ze zoomu 12. */
     private const ZOOM_KATASTRALNI_UZEMI = [0, 12];
 
     /** Dlaždice se mění jen při novém importu, proto dlouhá cache. */
