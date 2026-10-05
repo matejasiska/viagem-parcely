@@ -290,6 +290,10 @@ function vykresliLegendu(okres) {
 }
 
 function formatujVymeru(metry) {
+    if (metry === null) {
+        return 'výměra neuvedena';
+    }
+
     const zaklad = metry.toLocaleString('cs-CZ') + ' m²';
 
     return metry >= 10000

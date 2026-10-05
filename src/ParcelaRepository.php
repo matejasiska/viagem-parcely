@@ -42,7 +42,7 @@ final class ParcelaRepository
         }
 
         $parcela['id'] = (int) $parcela['id'];
-        $parcela['vymera'] = (int) $parcela['vymera'];
+        $parcela['vymera'] = self::vymera($parcela['vymera']);
         $parcela['katastralni_uzemi_kod'] = (int) $parcela['katastralni_uzemi_kod'];
         $parcela['lat'] = (float) $parcela['lat'];
         $parcela['lon'] = (float) $parcela['lon'];
@@ -94,7 +94,7 @@ final class ParcelaRepository
             static fn (array $r): array => [
                 'id' => (int) $r['id'],
                 'cislo' => $r['cislo'],
-                'vymera' => (int) $r['vymera'],
+                'vymera' => self::vymera($r['vymera']),
                 'druh_pozemku' => $r['druh_pozemku'],
                 'katastralni_uzemi' => $r['katastralni_uzemi'],
                 'obec' => $r['obec'],
@@ -103,6 +103,12 @@ final class ParcelaRepository
             ],
             $this->db->fetchAll($sql, $parametry),
         );
+    }
+
+    /** Výměra není ve schématu povinná. Chybějící se vrací jako null, ne jako 0 m². */
+    private static function vymera(mixed $hodnota): ?int
+    {
+        return $hodnota === null ? null : (int) $hodnota;
     }
 
     /**
