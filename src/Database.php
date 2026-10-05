@@ -7,17 +7,19 @@ namespace Katastr;
 use PDO;
 use PDOStatement;
 
+/**
+ * Připojuje se až při prvním dotazu. Dlaždice z cache na disku databázi nepotřebují,
+ * takže se vydají bez navazování spojení a fungují i při nedostupné databázi.
+ */
 final class Database
 {
-    private PDO $pdo;
+    private ?PDO $pdo = null;
 
-    public function __construct(string $dsn, string $user, string $password)
-    {
-        $this->pdo = new PDO($dsn, $user, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
+    public function __construct(
+        private readonly string $dsn,
+        private readonly string $user,
+        private readonly string $password,
+    ) {
     }
 
     public function fetchRow(string $sql, array $params = []): ?array
@@ -41,6 +43,12 @@ final class Database
 
     private function run(string $sql, array $params): PDOStatement
     {
+        $this->pdo ??= new PDO($this->dsn, $this->user, $this->password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params);
 
