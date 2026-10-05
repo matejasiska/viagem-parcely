@@ -110,7 +110,7 @@ s originální hranicí, 0 bez polygonu.** Polygony mají i vnitřní prstence (
 RÚIAN/ISKN identifikátor parcely, ne jen pořadové číslo souboru. Porovnání množin ID na KÚ,
 která mám z oba zdrojů:
 
-| KÚ | VFR (2026-07-31) | SHP (2026-10-02) | společných ID | jen VFR | jen SHP |
+| KÚ | VFR (2026-07-31) | SHP (k 2026-10-03) | společných ID | jen VFR | jen SHP |
 |---|---|---|---|---|---|
 | 659541 Jičín | 12 284 | 12 288 | 12 279 | 5 | 9 |
 | 725838 Popovice u Jičína | 1 475 | 1 475 | 1 475 | 0 | 0 |
@@ -233,7 +233,7 @@ a atributy, 1,75 s celá smyčka) tedy z velké části není rychlost formátu,
 
 ### Proč u SHP přesto zůstávám
 
-1. **Týdenní aktualizace** proti měsíční u VFR (SHP 2026-10-02, VFR 2026-09-30).
+1. **Týdenní aktualizace** proti měsíční u VFR (SHP k 2026-10-03, VFR k 2026-09-30).
 2. **Rozpočet úlohy.** Zadání odhaduje 4–12 h. Zjištění, že VFR je na většině os lepší,
    přišlo až po importu celého okresu. Výměna zdroje by znamenala přepsat import a znovu
    ověřit data, přitom funkčně by aplikace pro zadání nic nezískala: zobrazí parcelu a její
@@ -252,7 +252,10 @@ z VFR ochranu pozemku nebo BPEJ k už naimportovaným datům je tedy přírůstk
 
 ## Výsledek importu celého okresu (měřeno)
 
-Jeden běh, `docker compose run --rm import`, data z 2026-10-02:
+Data k 2026-10-03. Datum dat je nejnovější `Last-Modified` mezi 240 staženými ZIPy, tedy
+den poslední změny v kterémkoli KÚ okresu (ZIPy nesou data od 2025-09-07 do 2026-10-03,
+deset KÚ se změnilo 2026-10-03). Čistý import 2026-10-05 (`docker compose down -v && up`)
+dal stejné datum i stejný počet parcel.
 
 | Údaj | Hodnota |
 |---|---|
