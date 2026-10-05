@@ -26,8 +26,10 @@ final class Router
                 continue;
             }
 
-            if ($method !== 'GET') {
-                Response::error(405, 'Tento endpoint podporuje jen GET.');
+            // HEAD obslouží stejně jako GET, tělo odpovědi zahodí webový server.
+            if ($method !== 'GET' && $method !== 'HEAD') {
+                header('Allow: GET, HEAD');
+                Response::error(405, 'Tento endpoint podporuje jen GET a HEAD.');
 
                 return;
             }
