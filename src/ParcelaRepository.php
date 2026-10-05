@@ -54,41 +54,36 @@ final class ParcelaRepository
     /**
      * Hledá podle čísla parcely, volitelně omezeně na katastrální území (kód nebo část názvu).
      * Zadání '941' najde i '941/9', protože kmenové číslo bez poddělení je běžný vstup.
+     * Prázdné katastrální území dá vzor '%%', který vyhoví každému názvu, takže SQL je
+     * pro oba případy stejné.
      */
     public function hledej(string $cislo, string $katastralniUzemi, int $limit): array
     {
-        $podminky = ['(p.cislo = :cislo OR p.cislo ILIKE :cislo_s_poddelenim)'];
+        $sql = <<<'SQL'
+            SELECT p.id,
+                   p.cislo,
+                   p.vymera,
+                   dp.nazev AS druh_pozemku,
+                   k.nazev  AS katastralni_uzemi,
+                   k.obec_nazev AS obec,
+                   ST_Y(ST_Transform(ST_PointOnSurface(p.geom), 4326)) AS lat,
+                   ST_X(ST_Transform(ST_PointOnSurface(p.geom), 4326)) AS lon
+            FROM parcela p
+            JOIN katastralni_uzemi k ON k.kod = p.katastralni_uzemi_kod
+            LEFT JOIN druh_pozemku dp ON dp.kod = p.druh_pozemku_kod
+            WHERE (p.cislo = :cislo OR p.cislo ILIKE :cislo_s_poddelenim)
+              AND (k.kod::text = :ku OR k.nazev ILIKE :ku_nazev)
+            ORDER BY k.nazev, p.cislo
+            LIMIT :limit
+            SQL;
+
         $parametry = [
             'cislo' => $cislo,
             'cislo_s_poddelenim' => self::escapujLike($cislo) . '/%',
+            'ku' => $katastralniUzemi,
+            'ku_nazev' => '%' . self::escapujLike($katastralniUzemi) . '%',
+            'limit' => $limit,
         ];
-
-        if ($katastralniUzemi !== '') {
-            $podminky[] = '(k.kod::text = :ku OR k.nazev ILIKE :ku_nazev)';
-            $parametry['ku'] = $katastralniUzemi;
-            $parametry['ku_nazev'] = '%' . self::escapujLike($katastralniUzemi) . '%';
-        }
-
-        $sql = sprintf(
-            <<<'SQL'
-                SELECT p.id,
-                       p.cislo,
-                       p.vymera,
-                       dp.nazev AS druh_pozemku,
-                       k.nazev  AS katastralni_uzemi,
-                       k.obec_nazev AS obec,
-                       ST_Y(ST_Transform(ST_PointOnSurface(p.geom), 4326)) AS lat,
-                       ST_X(ST_Transform(ST_PointOnSurface(p.geom), 4326)) AS lon
-                FROM parcela p
-                JOIN katastralni_uzemi k ON k.kod = p.katastralni_uzemi_kod
-                LEFT JOIN druh_pozemku dp ON dp.kod = p.druh_pozemku_kod
-                WHERE %s
-                ORDER BY k.nazev, p.cislo
-                LIMIT %d
-                SQL,
-            implode(' AND ', $podminky),
-            $limit,
-        );
 
         return array_map(
             static fn (array $r): array => [
