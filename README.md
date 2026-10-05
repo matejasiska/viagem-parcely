@@ -22,6 +22,9 @@ docker compose up
 Tím se postaví databáze, naimportují data a nastartuje web. Mapa pak běží na
 <http://localhost:8080>.
 
+Hesla k databázi jsou přímo v `docker-compose.yml` vědomě, aby aplikace šla lokálně spustit
+bez dalších kroků. V produkci by patřila do Docker secrets nebo do `.env` mimo repozitář.
+
 ### Jak dlouho to trvá
 
 Měřeno na Windows 11, Docker Desktop s WSL2, od `docker compose down -v`:
