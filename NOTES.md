@@ -200,6 +200,37 @@ mapy, které v aplikaci nepoužívám — a na tomhle vzorku se načetl dvakrát
 je sice pětkrát větší než shapefilový vstup, ale import maže rozbalená data po každé jednotce,
 takže na disku leží jen jedna obec.
 
+### Jak 1,41 s souvisí se 112 s za celý okres
+
+Řádek „načtení do PostGIS“ výše je jen fáze `ogr2ogr` z už stažených a rozbalených souborů,
+na ploše obce Jičín (5 KÚ). Nezahrnuje stahování, rozbalení ani sestavení cílových tabulek.
+Rozpad na fáze jsem si tehdy nezapsal, proto jsem import změřil znovu po fázích, ze ZIPů
+v cache (bez stahování), do samostatné databáze. Dva běhy, rozdíly do 0,5 s:
+
+| Fáze | obec Jičín, 5 KÚ | celý okres, 240 KÚ |
+|---|---|---|
+| unzip | 0,2 s | 3,7 s |
+| `ogr2ogr` polygony parcel (`PARCELY_KN_P`) | 0,75 s | 25,3 s |
+| `ogr2ogr` atributy parcel (`PARCELY_KN_DEF`) | 0,35 s | 14,9 s |
+| `ogr2ogr` hranice KÚ (`KATASTRALNI_UZEMI_P`) | 0,43 s | 20,6 s |
+| smyčka přes KÚ celkem | 1,75 s | 65,2 s |
+| sestavení tabulek (`03_build.sql`, join, GiST index, ANALYZE) | 0,48 s | 7,1 s |
+| běh kontejneru celkem | | 73–74 s |
+| parcel | 16 955 | 272 111 |
+
+Původních 1,41 s odpovídá zhruba `ogr2ogr` polygonů a atributů (dnes 1,1 s) plus části režie.
+Za celý okres je to 40 s, ne 16 × 1,41 = 23 s, protože čas neroste s počtem parcel, ale hlavně
+s počtem volání `ogr2ogr`. Je jich 3 na KÚ, tedy 720. Vrstva hranic KÚ má v každém souboru
+jediný polygon, a přesto zabere 86 ms na KÚ a 20,6 s celkem. To je režie jednoho volání
+(start procesu, připojení k databázi, zjištění struktury tabulky), ne práce s daty.
+
+Zbytek do 112 s je stahování 240 ZIPů ze sítě. Ten se mění podle odezvy ČÚZK: v README je
+změřeno 134 s ze sítě a 67 s z cache.
+
+Stejnou metodou jsem znovu změřil VFR obce Jičín (stav 2026-09-30, jedno volání `ogr2ogr`
+na vrstvu `Parcely`): 790, 790 a 830 ms, 16 953 parcel. Rozdíl proti SHP (1,1 s za polygony
+a atributy, 1,75 s celá smyčka) tedy z velké části není rychlost formátu, ale 1 volání proti 15.
+
 ### Proč u SHP přesto zůstávám
 
 1. **Je naimportovaný a geometricky ověřený.** 272 111 parcel, pokrytí katastrálních území
@@ -229,7 +260,7 @@ Jeden běh, `docker compose run --rm import`, data z 2026-10-02:
 |---|---|
 | katastrálních území | 240 z 240, všechna s geometrií |
 | parcel | 272 111 |
-| doba importu | 112 s |
+| doba importu (včetně stahování ze sítě) | 112 s |
 | nestažená KÚ | 0 |
 | geometrie bez atributů | 0 |
 | atributy bez geometrie | 0 |
