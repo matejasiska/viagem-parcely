@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Katastr;
 
-final class KatastralniUzemiRepository
+final class OkresRepository
 {
     public function __construct(private readonly Database $db)
     {

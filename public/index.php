@@ -7,7 +7,7 @@ use Katastr\Database;
 use Katastr\DlazdiceCache;
 use Katastr\DlazdiceController;
 use Katastr\DlazdiceRepository;
-use Katastr\KatastralniUzemiRepository;
+use Katastr\OkresRepository;
 use Katastr\ParcelaRepository;
 use Katastr\Response;
 use Katastr\Router;
@@ -19,7 +19,7 @@ require __DIR__ . '/../src/Response.php';
 require __DIR__ . '/../src/DlazdiceCache.php';
 require __DIR__ . '/../src/DlazdiceRepository.php';
 require __DIR__ . '/../src/ParcelaRepository.php';
-require __DIR__ . '/../src/KatastralniUzemiRepository.php';
+require __DIR__ . '/../src/OkresRepository.php';
 require __DIR__ . '/../src/DlazdiceController.php';
 require __DIR__ . '/../src/ApiController.php';
 
@@ -32,7 +32,7 @@ try {
 
     $api = new ApiController(
         new ParcelaRepository($db),
-        new KatastralniUzemiRepository($db),
+        new OkresRepository($db),
     );
     $dlazdice = new DlazdiceController(
         new DlazdiceRepository($db),

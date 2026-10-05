@@ -10,13 +10,13 @@ final class ApiController
 
     public function __construct(
         private readonly ParcelaRepository $parcely,
-        private readonly KatastralniUzemiRepository $katastralniUzemi,
+        private readonly OkresRepository $okres,
     ) {
     }
 
     public function okres(): void
     {
-        Response::json($this->katastralniUzemi->prehled(), 300);
+        Response::json($this->okres->prehled(), 300);
     }
 
     public function parcela(array $params): void
