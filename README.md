@@ -161,6 +161,18 @@ pro produkci by byl kvůli podmínkám užití OSM potřeba vlastní nebo komer�
 Vlastníci parcel nejsou v otevřených datech ČÚZK. Detail parcely proto odkazuje na
 veřejný detail ve Veřejném dálkovém přístupu k RÚIAN.
 
+## Známá omezení
+
+- **Cache dlaždic nezávisí na verzi dat.** Dlaždice leží na disku pod `{vrstva}/{z}/{x}/{y}.pbf`
+  bez data importu v cestě. Nový import proto počítá s `docker compose down -v`, které smaže
+  databázi i cache dlaždic najednou. Samotné přeimportování dat bez smazání volume
+  `tile-cache` by nechalo na disku staré dlaždice.
+- **Výsledky hledání se řadí podle čísla parcely jako text**, takže `1000` je před `2`.
+  Číslo parcely je ve zdroji SHP jen zobrazovací řetězec (`941/9`, `st. 4528`). Číselné řazení
+  by potřebovalo kmenové číslo a poddělení zvlášť. Ty má strukturovaně VFR, viz
+  [NOTES.md](NOTES.md). Výsledků je nejvýš 50 a jsou seskupené podle katastrálního území,
+  takže na použitelnost to má malý vliv.
+
 ## Struktura
 
 ```
