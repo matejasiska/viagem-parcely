@@ -6,6 +6,9 @@ namespace Katastr;
 
 final class DlazdiceController
 {
+    // Stejné rozsahy zoomů má i mapa v public/app.js (ZOOM_PARCELY_OD a maxzoom zdrojů).
+    // Při změně je potřeba upravit obě místa.
+
     /**
      * Parcely se nekreslí od nejmenších zoomů: v zoomu 12 by jedna dlaždice pokrývala
      * přes 30 km2, tedy tisíce parcel, které jsou na obrazovce menší než pixel.

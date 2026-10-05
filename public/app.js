@@ -2,6 +2,7 @@
 
 // Zoom, od kterého server generuje dlaždice parcel. Pod ním se kreslí jen hranice KÚ,
 // protože 272 tisíc parcel nad celým okresem by byly podpixelové útvary.
+// Musí odpovídat ZOOM_PARCELY v src/DlazdiceController.php, stejně jako maxzoom zdrojů níže.
 const ZOOM_PARCELY_OD = 14;
 
 // Kód, název a barva druhu pozemku. Kódy jsou z číselníku ČÚZK SC_D_POZEMKU,
