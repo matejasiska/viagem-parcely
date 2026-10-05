@@ -411,21 +411,37 @@ dlaždici a dostával 130 ms i z cache — to bylo startování procesu na Windo
 Druhá chyba: `curl -o /dev/null` s více URL přesměruje jen první odpověď, zbytek jde na stdout,
 takže se počítala jedna dlaždice místo všech.
 
+Velikosti jsou uvedené před gzipem i po něm. Od 2026-10-05 nginx dlaždice komprimuje
+(`gzip_comp_level` výchozí 1), takže prohlížeč přenáší velikost po gzipu. Časy jsou měřené
+s `Accept-Encoding: gzip`, tedy jako v prohlížeči. Studená cache = smazaná cache dlaždic na disku,
+databáze zahřátá. Čísla jsou ze dvou běhů na datech k 2026-10-03.
+
 ### Zobrazení celého okresu
 
-| Pohled | dlaždic | prázdných | celkem | největší | studená cache | teplá cache |
+| Pohled | dlaždic | prázdných | celkem před / po gzipu | největší před / po gzipu | studená cache | teplá cache |
 |---|---|---|---|---|---|---|
-| celý okres, hranice KÚ, z10 | 9 | 3 | 187 kB | 106 kB | 409 ms | 53 ms |
-| celý okres, hranice KÚ, z11 | 20 | 5 | 215 kB | 38 kB | 579 ms | 116 ms |
-| Jičín, parcely, z14 (5×5) | 25 | 0 | 1 932 kB | 286 kB | 1 378 ms | 145 ms |
-| Jičín, parcely, z16 (5×5) | 25 | 0 | 508 kB | 36 kB | 675 ms | 142 ms |
+| celý okres, hranice KÚ, z10 | 9 | 3 | 192 / 116 kB | 109 / 66 kB | 431–453 ms | 47–49 ms |
+| celý okres, hranice KÚ, z11 | 20 | 5 | 221 / 153 kB | 39 / 27 kB | 615–617 ms | 60–62 ms |
+| Jičín, parcely, z14 (5×5) | 25 | 0 | 1 989 / 1 291 kB | 294 / 181 kB | 1 405–1 441 ms | 95–96 ms |
+| Jičín, parcely, z16 (5×5) | 25 | 0 | 453 / 304 kB | 35 / 21 kB | 675–692 ms | 69–71 ms |
 
-Na celý okres se tedy stáhne **9 dlaždic a 187 kB**, protože pod zoomem 14 se místo parcel
-kreslí hranice katastrálních území. Cache na disku zrychluje vydání dlaždice z 27–55 ms
-na konstantních **5,8 ms** bez ohledu na vrstvu.
+Na celý okres se tedy přenese **9 dlaždic a 116 kB**, protože pod zoomem 14 se místo parcel
+kreslí hranice katastrálních území.
 
-Dlaždice parcel za celý okres v zoomu 14 je 630 dlaždic a 18,5 MB, generování všech trvalo 59 s.
-To ale nikdo nestahuje celé — na obrazovce je jich zároveň jednotky.
+Jedna dlaždice z cache, medián ze 125 požadavků (pohled z14 pětkrát po sobě):
+
+| Varianta | medián |
+|---|---|
+| připojení k DB při každém požadavku, bez gzipu (původní stav) | 5,5 ms |
+| připojení k DB až při prvním dotazu, bez gzipu | 1,0 ms |
+| připojení k DB až při prvním dotazu, s gzipem | 2,0 ms |
+
+Ze 5,5 ms bylo zhruba 4,5 ms navázání spojení s PostgreSQL, které dlaždice z cache vůbec
+nepotřebuje. Gzip přidá zhruba 1 ms komprese na dlaždici, přenos se tím na pohledech výše zmenší o 31–40 %.
+
+Dlaždice parcel za celý okres v zoomu 14: 600 dlaždic, 164 prázdných, 18,9 MB před gzipem
+a 12,7 MB po něm. Vygenerování všech trvalo 18,9 s. To ale nikdo nestahuje celé, na obrazovce
+je jich zároveň jednotky.
 
 ### Od kterého zoomu kreslit parcely: z12, z13, z14
 
@@ -434,28 +450,31 @@ stejnou obrazovku stáhne nejvýš zhruba dvojnásobek z14 a žádná dlaždice 
 ~500 kB.
 
 „Pohled“ je 5 × 5 dlaždic kolem středu KÚ Jičín, tedy stejně velká obrazovka (1280 × 1280 px)
-v každém zoomu. Studená cache = smazaná cache dlaždic, databáze už zahřátá. Dva běhy, oba
-uvedené:
+v každém zoomu. Pro z12 a z13 jsem v `DlazdiceController` dočasně povolil parcely od z12
+a po měření změnu vrátil.
 
-| Pohled 5 × 5 | objem | největší dlaždice | studená cache | teplá cache |
+| Pohled 5 × 5 | celkem před / po gzipu | největší dlaždice před / po gzipu | studená cache | teplá cache |
 |---|---|---|---|---|
-| z14 | 1 989 kB | 294 kB | 1 537 / 1 459 ms | 219 / 184 ms |
-| z13 | 4 981 kB | 686 kB | 2 514 / 2 191 ms | 183 / 187 ms |
-| z12 | 12 635 kB | 1 292 kB | 4 009 / 3 940 ms | 204 / 198 ms |
+| z14 | 1 989 / 1 291 kB | 294 / 181 kB | 1 441 ms | 95 ms |
+| z13 | 4 982 / 3 190 kB | 686 / 405 kB | 2 123 ms | 137 ms |
+| z12 | 12 636 / 7 800 kB | 1 293 / 749 kB | 3 898 ms | 242 ms |
 
-Celý okres (všechny dlaždice v bboxu okresu), kvůli maximální velikosti jedné dlaždice:
+Celý okres (všechny dlaždice v bboxu okresu), kvůli maximální velikosti jedné dlaždice.
+Medián je z dřívějšího běhu bez gzipu na stejných datech:
 
-| Zoom | dlaždic | prázdných | celkem | medián neprázdné | největší | nejpomalejší generování |
-|---|---|---|---|---|---|---|
-| z14 | 600 | 164 | 18 913 kB | 39 kB | 352 kB | 117 ms |
-| z13 | 176 | 51 | 17 617 kB | 133 kB | 686 kB | 199 ms |
-| z12 | 54 | 14 | 16 824 kB | 408 kB | 1 292 kB | 365 ms |
+| Zoom | dlaždic | prázdných | celkem před / po gzipu | medián neprázdné před gzipem | největší před / po gzipu |
+|---|---|---|---|---|---|
+| z14 | 600 | 164 | 18 911 / 12 721 kB | 39 kB | 352 / 217 kB |
+| z13 | 176 | 51 | 17 618 / 11 389 kB | 133 kB | 686 / 405 kB |
+| z12 | 54 | 14 | 16 822 / 10 367 kB | 408 kB | 1 293 / 749 kB |
 
-**Zamítnuto, parcely zůstávají od z14.** z13 nesplňuje ani jedno kritérium: na obrazovku
-stáhne 2,5× víc než z14 a nejtěžší dlaždice má 686 kB, další dvě 559 a 419 kB. z12 je
-6,4× objem z14 a medián dlaždice je 408 kB. Objem za celý okres je ve všech zoomech podobný
-(17–19 MB, jsou to tytéž parcely), ale v nižším zoomu se vejde na jednu obrazovku větší díl
-okresu, takže se na jednu obrazovku stahuje víc.
+**Zamítnuto, parcely zůstávají od z14.** Poprvé jsem to měřil bez gzipu a z13 tehdy nesplnil
+ani jedno kritérium. Nejtěžší dlaždice měla 686 kB, další dvě 559 a 419 kB. S gzipem má
+nejtěžší dlaždice z13 405 kB, takže kritérium velikosti splní. Neprojde ale na objemu: na
+obrazovku přenese 3 190 kB, tedy 2,5× víc než z14 (1 291 kB). Poměr je s gzipem i bez něj
+stejný. z12 je 6,0× objem z14 a jeho nejtěžší dlaždice má i po gzipu 749 kB. Objem za celý
+okres je ve všech zoomech podobný (17–19 MB před gzipem, jsou to tytéž parcely), ale v nižším
+zoomu se vejde na jednu obrazovku větší díl okresu, takže se na jednu obrazovku stahuje víc.
 
 Při měření jsem se spletl: mazání cache přes `docker compose exec php rm -rf /app/cache/...`
 z Git Bash nic nesmazalo, protože MSYS přepsal cestu `/app/...` na cestu ve Windows. První
@@ -467,13 +486,13 @@ adresáře po smazání.
 Chtěl jsem podle plánu zjednodušovat geometrii podle zoomu. Na nejhustší dlaždici
 (z14 nad Jičínem, 4 525 parcel) to vypadá takto:
 
-| Varianta | bajtů | vrcholů | parcel v dlaždici |
+| Varianta | bajtů před gzipem | vrcholů | parcel v dlaždici |
 |---|---|---|---|
 | bez zjednodušení | 293 804 | 57 294 | 4 525 |
 | `ST_SimplifyPreserveTopology`, tolerance 1 jednotka MVT | 257 265 | 38 875 | 4 523 |
 | tolerance 4 jednotky MVT | 241 957 | 31 305 | 4 517 |
 
-Zjednodušení ubere 12 až 18 % objemu, ale **ubere i parcely** — drobné parcely se při
+Zjednodušení ubere 12 až 18 % objemu před gzipem, ale **ubere i parcely** — drobné parcely se při
 zjednodušení složí do ničeho a z dlaždice vypadnou. V aplikaci, kde se na parcelu kliká
 a čtou se k ní údaje, je tiše zmizelá parcela horší vada než 12 % bajtů. Nepoužívám ho.
 

@@ -27,13 +27,15 @@ bez dalších kroků. V produkci by patřila do Docker secrets nebo do `.env` mi
 
 ### Jak dlouho to trvá
 
-Měřeno na Windows 11, Docker Desktop s WSL2, od `docker compose down -v`:
+Měřeno na Windows 11, Docker Desktop s WSL2, od `docker compose down -v` (2026-10-05):
 
 | Krok | Čas |
 |---|---|
-| od `docker compose up` do konce importu | 149 s |
-| z toho samotný import (240 KÚ ze sítě) | 134 s |
+| od `docker compose up` do konce importu | 134 s |
+| z toho samotný import (240 KÚ ze sítě) | 125 s |
 | opakovaný import z lokální cache | 67 s |
+
+Čas závisí hlavně na odezvě ČÚZK. Stejný postup jindy trval 149 s, z toho import 134 s.
 
 Import stahuje 240 ZIP souborů, celkem 105 MB. Postup vypisuje průběžně.
 Pokud ČÚZK není dostupné, skončí srozumitelnou chybou a to, co už stáhl, si nechá v cache —
@@ -50,8 +52,8 @@ docker compose down -v && docker compose up
 
 Mapa má dvě vrstvy a přepíná je podle zoomu:
 
-- **do zoomu 13** hranice a názvy katastrálních území. Celý okres je 9 dlaždic a 187 kB,
-  takže se otevře hned. Kreslit 272 tisíc parcel v tomhle zoomu nemá smysl, byly by menší
+- **do zoomu 13** hranice a názvy katastrálních území. Celý okres je 9 dlaždic a 116 kB
+  přenosu (192 kB před gzipem), takže se otevře hned. Kreslit 272 tisíc parcel v tomhle zoomu nemá smysl, byly by menší
   než pixel.
 - **od zoomu 14** parcely, obarvené podle druhu pozemku. Kliknutím na parcelu se vpravo
   otevře detail s výměrou, druhem pozemku, způsobem využití, katastrálním územím a obcí,
@@ -65,17 +67,21 @@ styl nebo filtr bez přegenerování celé sady, a druhé zobrazení téhož mí
 
 ### Výkon
 
-Měřeno lokálně, jedním procesem `curl` přes celou sadu dlaždic:
+Měřeno lokálně, jedním procesem `curl` přes celou sadu dlaždic, s `Accept-Encoding: gzip`
+jako v prohlížeči. Studená cache znamená smazanou cache dlaždic na disku, databáze je zahřátá.
+Pohled 5×5 dlaždic je obrazovka 1280 × 1280 px kolem středu Jičína.
 
-| Pohled | dlaždic | objem | studená cache | teplá cache |
-|---|---|---|---|---|
-| celý okres (hranice KÚ, z10) | 9 | 187 kB | 409 ms | 53 ms |
-| Jičín, parcely, z14 (5×5) | 25 | 1 932 kB | 1 378 ms | 145 ms |
-| Jičín, parcely, z16 (5×5) | 25 | 508 kB | 675 ms | 142 ms |
+| Pohled | dlaždic | přenos (po gzipu) | před gzipem | studená cache | teplá cache |
+|---|---|---|---|---|---|
+| celý okres (hranice KÚ, z10) | 9 | 116 kB | 192 kB | 431–453 ms | 47–49 ms |
+| Jičín, parcely, z14 (5×5) | 25 | 1 291 kB | 1 989 kB | 1 405–1 441 ms | 95–96 ms |
+| Jičín, parcely, z16 (5×5) | 25 | 304 kB | 453 kB | 675–692 ms | 69–71 ms |
 
-Z cache vydá server dlaždici za 5,8 ms bez ohledu na vrstvu.
+Jedna dlaždice z cache trvá 2,0 ms s gzipem a 1,0 ms bez něj (medián ze 125 požadavků).
+Z cache se dlaždice vydá bez připojení k databázi, takže funguje i při jejím výpadku.
 
-Zjednodušení geometrie podle zoomu jsem změřil a nepoužil: ubralo 12 až 18 % objemu, ale
+Zjednodušení geometrie podle zoomu jsem změřil a nepoužil: ubralo 12 až 18 % objemu
+(před gzipem), ale
 zároveň z dlaždice vypadly drobné parcely. Podrobně v [NOTES.md](NOTES.md).
 
 ## Výklad zadání
@@ -112,7 +118,7 @@ s dlaždicí 512 px, takže m/px = 40 075 017 · cos(φ) / (512 · 2^z). Strana 
 Celý okres (bbox 45 × 30 km) se na obrazovku Full HD vejde zhruba v zoomu 10. Tam má
 mediánová parcela půl pixelu a i průměrná jen jeden. Teprve od zoomu 13 až 14 je typická
 parcela útvar o straně několika pixelů, na který jde kliknout. Proto se na celém okrese
-kreslí hranice 240 katastrálních území (9 dlaždic, 187 kB) a parcely od zoomu 14.
+kreslí hranice 240 katastrálních území (9 dlaždic, 116 kB po gzipu) a parcely od zoomu 14.
 Zkoušel jsem kreslit parcely už od z13 a z12. Zamítnul jsem to podle objemu dlaždic,
 podrobně v [NOTES.md](NOTES.md).
 
