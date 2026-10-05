@@ -60,13 +60,13 @@ final class ParcelaRepository
         $podminky = ['(p.cislo = :cislo OR p.cislo ILIKE :cislo_s_poddelenim)'];
         $parametry = [
             'cislo' => $cislo,
-            'cislo_s_poddelenim' => $cislo . '/%',
+            'cislo_s_poddelenim' => self::escapujLike($cislo) . '/%',
         ];
 
         if ($katastralniUzemi !== '') {
             $podminky[] = '(k.kod::text = :ku OR k.nazev ILIKE :ku_nazev)';
             $parametry['ku'] = $katastralniUzemi;
-            $parametry['ku_nazev'] = '%' . $katastralniUzemi . '%';
+            $parametry['ku_nazev'] = '%' . self::escapujLike($katastralniUzemi) . '%';
         }
 
         $sql = sprintf(
@@ -103,5 +103,14 @@ final class ParcelaRepository
             ],
             $this->db->fetchAll($sql, $parametry),
         );
+    }
+
+    /**
+     * Uživatel hledá text, ne vzor: bez escapování by '%' nebo '_' v zadání našly libovolné
+     * parcely. Zpětné lomítko je výchozí escape znak LIKE v PostgreSQL.
+     */
+    private static function escapujLike(string $text): string
+    {
+        return addcslashes($text, '%_\\');
     }
 }
