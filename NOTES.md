@@ -494,3 +494,15 @@ těch nejmenších. Je to vlastnost formátu, ne importu — v databázi jsou v�
   i atributy v jedné vrstvě a navíc BPEJ, způsob ochrany pozemku a strukturované číslo parcely
   (`KmenoveCislo`, `PododdeleniCisla`, `DruhCislovaniKod`). Bez přepisu importu jde VFR připojit
   k parcelám ze SHP přes `ID_2` = `pai:Id` a doplnit jen tyto atributy.
+- **Méně volání `ogr2ogr` v importu.** Import volá `ogr2ogr` třikrát na KÚ, celkem 720×.
+  Změřeno ze ZIPů v cache: `ogr2ogr` dohromady 60,8 s z 65,2 s smyčky přes KÚ. Vrstva hranic
+  KÚ má v každém souboru jediný polygon, a přesto stojí 86 ms na volání a 20,6 s celkem.
+  To je režie volání (start procesu, připojení k databázi, zjištění struktury tabulky), ne
+  práce s daty. Jak bych ji snížil:
+  - Načíst každou vrstvu jedním voláním přes všechna KÚ: VRT soubor s `OGRVRTUnionLayer`
+    nad 240 shapefily, čtenými přes `/vsizip/` bez rozbalování (unzip stojí dalších 3,7 s).
+    Ze 720 volání by byla 3.
+  - Hranice KÚ nenačítat vůbec a spočítat je v SQL jako `ST_Union` parcel. Parcely pokrývají
+    KÚ na 100,000 % (ověřeno výše), takže výsledek by měl být stejný. Čas `ST_Union` nad
+    272 tisíci polygony jsem neměřil.
+  - Úsporu žádné z variant jsem neměřil, jen režii, kterou by odstranily.
