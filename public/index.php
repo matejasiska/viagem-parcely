@@ -49,6 +49,7 @@ try {
     $router->dispatch(
         $_SERVER['REQUEST_METHOD'],
         (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH),
+        $_GET,
     );
 } catch (Throwable $e) {
     // Klient nemá vidět detaily databáze, do logu patří.

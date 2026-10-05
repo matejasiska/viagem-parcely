@@ -32,10 +32,20 @@ final class ApiController
         Response::json($parcela, 3600);
     }
 
-    public function hledani(): void
+    public function hledani(array $params): void
     {
-        $cislo = trim((string) ($_GET['cislo'] ?? ''));
-        $ku = trim((string) ($_GET['ku'] ?? ''));
+        $cislo = $params['cislo'] ?? '';
+        $ku = $params['ku'] ?? '';
+
+        // ?cislo[]=1 dává v PHP pole místo řetězce.
+        if (!is_string($cislo) || !is_string($ku)) {
+            Response::error(400, 'Parametry cislo a ku musí být text.');
+
+            return;
+        }
+
+        $cislo = trim($cislo);
+        $ku = trim($ku);
 
         if ($cislo === '') {
             Response::error(400, 'Chybí parametr cislo s číslem parcely.');
