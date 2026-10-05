@@ -52,6 +52,8 @@ function vytvorMapu(okres) {
 
     const map = new maplibregl.Map({
         container: 'mapa',
+        // Výchozí atribuce se na úzkém okně sbalí do ikony. Podmínky OSM chtějí, aby byla vidět.
+        attributionControl: false,
         style: {
             version: 8,
             glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -61,7 +63,7 @@ function vytvorMapu(okres) {
                     tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
                     tileSize: 256,
                     maxzoom: 19,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, parcely &copy; ČÚZK',
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, parcely &copy; ČÚZK',
                 },
                 // maxzoom u vektorového zdroje říká, odkud si MapLibre dlaždice dopočítá
                 // přeskalováním, takže server negeneruje stejný obsah pro vyšší zoomy znovu.
@@ -157,6 +159,7 @@ function vytvorMapu(okres) {
     });
 
     map.fitBounds(okres.rozsah, { padding: 20, animate: false });
+    map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
     map.addControl(new maplibregl.ScaleControl(), 'bottom-right');
 

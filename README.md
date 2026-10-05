@@ -149,6 +149,10 @@ Proč tenhle zdroj a ne RÚIAN VFR nebo INSPIRE, včetně měření, je v [NOTES
 Import jde přesměrovat na jiný okres změnou `OKRES_KOD` v `docker-compose.yml`
 (Jičín je 3604).
 
+Podkladová mapa se načítá z `tile.openstreetmap.org`. Pro lokální demo je to v pořádku,
+pro produkci by byl kvůli podmínkám užití OSM potřeba vlastní nebo komerční zdroj dlaždic
+(např. Mapy.cz API, MapTiler).
+
 ## Co v datech není
 
 Vlastníci parcel nejsou v otevřených datech ČÚZK. Detail parcely proto odkazuje na
