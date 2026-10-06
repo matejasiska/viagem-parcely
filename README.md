@@ -195,3 +195,49 @@ Kontext úlohy a pravidla pro práci jsou v `CLAUDE.md`. Rozhodnutí, slepé uli
 průběžně zapisovala do `NOTES.md`. Kód psal převážně Claude Code; já jsem zadával úkoly,
 rozhodoval, kontroloval výstupy a testoval (Chrome, Firefox, s cache dlaždic i bez ní,
 čistá instalace na jiném PC).
+
+## Zápisník
+
+Podrobná měření a postup jsou v NOTES.md. Tady je stručně to hlavní.
+
+### Rozhodnutí
+
+- Celý okres místo povinného minima. Když se řeší výkon, chtěl jsem ho
+  ukázat na celém rozsahu, ne na pěti katastrálních územích.
+- Data předem, ne live z WFS. Live služba má limity a nad celým okresem
+  by plynulá nebyla. Katastr se mění zřídka, jednorázový import stačí.
+- Docker + PostGIS. Zvažoval jsem jednodušší variantu s předpočítanými
+  dlaždicemi (MBTiles) bez databáze. Vybral jsem PostGIS, protože jde
+  o relační data s geometrií a dlaždice generované z databáze jdou měnit
+  (styl, filtry) bez přegenerování.
+- Zdroj dat: SHP po katastrálních územích. Porovnal jsem tři zdroje
+  (SHP, INSPIRE GML, VFR). INSPIRE vypadl kvůli objemu. VFR vychází
+  v měření stejně dobře, SHP jsem nechal kvůli týdenní aktualizaci.
+- Na oddáleném okrese jen hranice KÚ. Medián plochy parcely je 557 m²,
+  na zoomu 10 je to méně než pixel. Parcely ukazuji od zoomu 14. Zoom 13
+  jsem změřil a těsně neprošel kritériem, které jsem si stanovil předem.
+
+### Co mě překvapilo
+
+- V SHP jsou polygon parcely a její číslo s výměrou ve dvou různých
+  vrstvách a atribut ID není unikátní napříč KÚ. Správný klíč je ID_2.
+- Proti statistice ČÚZK chybělo 1,65 % parcel. Nebyla to chyba importu,
+  ale pozemkové úpravy u Libáně, které parcely scelily.
+- Zapsaná výměra se u malých parcel výrazně liší od plochy polygonu.
+  Je to právní údaj z měření, ne plocha z mapy.
+- COPY ve formátu CSV převádí prázdné pole na NULL, takže filtr = ''
+  tiše nevrátil nic.
+- Firefox mi padal i na oficiálních ukázkách MapLibre. Problém byl
+  v prohlížeči, ne v aplikaci.
+- Review kódu našlo věci, které by mi jinak utekly: PHP warningy tekoucí
+  do odpovědi a připojování k databázi i u dlaždic z cache.
+
+### Co bych s víc časem udělal jinak
+
+- Přešel na VFR, nebo ho připojil přes ID_2 kvůli BPEJ, ochraně pozemku
+  a strukturovanému číslu parcely.
+- Zrychlil import. Většinu času nežere objem dat, ale 720 samostatných
+  volání ogr2ogr.
+- ETag dlaždic odvozený od verze dat. Vyřešil by i zastaralou cache
+  po reimportu.
+- Do cache ukládat rovnou zkomprimované dlaždice.
