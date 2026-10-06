@@ -234,7 +234,7 @@ a atributy, 1,75 s celá smyčka) tedy z velké části není rychlost formátu,
 ### Proč u SHP přesto zůstávám
 
 1. **Týdenní aktualizace** proti měsíční u VFR (SHP k 2026-10-03, VFR k 2026-09-30).
-2. **Rozpočet úlohy.** Zadání odhaduje 4–12 h. Zjištění, že VFR je na většině os lepší,
+2. **Výměna by aplikaci nic nepřinesla.** Zjištění, že VFR je na většině os lepší,
    přišlo až po importu celého okresu. Výměna zdroje by znamenala přepsat import a znovu
    ověřit data, přitom funkčně by aplikace pro zadání nic nezískala: zobrazí parcelu a její
    údaje i ze SHP. Proto jsem zdroj zpětně neměnil a rozdíly jen popsal.

@@ -188,3 +188,10 @@ import/              stahování z ČÚZK a import do PostGIS (GDAL + psql)
 src/                 backend: router, repozitáře, controllery
 public/              front controller a mapa (MapLibre GL)
 ```
+
+## Jak jsem pracoval
+
+Kontext úlohy a pravidla pro práci jsou v `CLAUDE.md`. Rozhodnutí, slepé uličky a měření se
+průběžně zapisovala do `NOTES.md`. Kód psal převážně Claude Code; já jsem zadával úkoly,
+rozhodoval, kontroloval výstupy a testoval (Chrome, Firefox, s cache dlaždic i bez ní,
+čistá instalace na jiném PC).
